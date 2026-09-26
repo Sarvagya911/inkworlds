@@ -1,0 +1,39 @@
+/* ---------- Settings ---------- */
+.settings {
+  display: grid;
+  gap: 1.6rem;
+  max-width: 40rem;
+  margin-top: 1.6rem;
+}
+.set-group {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.2rem 1.3rem;
+}
+.set-group h2 {
+  font-size: 1.35rem;
+  margin: 0 0 0.8rem;
+}
+.set-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--line);
+}
+.set-row:first-of-type {
+  border-top: 0;
+}
+.set-row label {
+  flex: 1;
+}
+.set-row .why {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.set-row input[type='range'] {
+  width: 10rem;
+}

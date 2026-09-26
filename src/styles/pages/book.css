@@ -1,0 +1,126 @@
+/* ---------- Book page ---------- */
+.book-grid {
+  display: grid;
+  grid-template-columns: minmax(14rem, 21rem) 1fr;
+  gap: clamp(1.5rem, 5vw, 3.5rem);
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .book-grid {
+    grid-template-columns: 1fr;
+  }
+  .cover {
+    max-width: 19rem;
+  }
+}
+.cover {
+  position: relative;
+  aspect-ratio: 2/3;
+  border-radius: 4px 10px 10px 4px;
+  overflow: hidden;
+  box-shadow:
+    -6px 0 0 var(--wood-dark),
+    0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.cover canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.cover .ct {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 14%;
+  text-align: center;
+  padding: 1rem 0.8rem;
+  border-radius: 4px;
+}
+.cover .ct .h {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.15;
+}
+.cover .ct .a {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-top: 0.5rem;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 1rem;
+  margin: 1.4rem 0;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.facts b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+.facts span {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.moodline {
+  display: flex;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 0.6rem 0 0.5rem;
+  gap: 2px;
+}
+.moodline a {
+  display: block;
+  min-width: 4px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1.1rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.legend i {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 2px;
+  margin-right: 0.35em;
+  vertical-align: -0.05em;
+}
+.m-stormy {
+  background: #4b6b8f;
+}
+.m-dark {
+  background: #6e2a3a;
+}
+.m-bright {
+  background: #d9a441;
+}
+.m-calm {
+  background: #8fa38a;
+}
+.sub-block {
+  margin-top: 2.2rem;
+}
+.sub-block h2 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem;
+}
+.docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.docs span {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.8rem;
+  font-size: 0.92rem;
+}

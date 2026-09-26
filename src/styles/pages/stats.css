@@ -1,0 +1,62 @@
+/* ---------- Stats ---------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1.2rem;
+  margin: 1.8rem 0;
+}
+.kpi {
+  border-left: 3px solid var(--brass);
+  padding-left: 0.9rem;
+}
+.kpi b {
+  display: block;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 2.3rem;
+  line-height: 1;
+}
+.kpi span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.chart {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.2rem;
+  margin-top: 1rem;
+}
+.chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.hbars {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+.hbar {
+  display: grid;
+  grid-template-columns: 10rem 1fr 4.5rem;
+  gap: 0.8rem;
+  align-items: center;
+  font-size: 0.95rem;
+}
+.hbar .track {
+  height: 10px;
+  background: var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.hbar .track i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+}
+@media (max-width: 560px) {
+  .hbar {
+    grid-template-columns: 7rem 1fr 3.8rem;
+  }
+}

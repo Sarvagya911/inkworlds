@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inkworlds</title>
+<meta name="description" content="Upload a book and read it inside its own living world, with era fonts, handwritten letters, sound, highlights and reading communities.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%95%AF%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Cinzel+Decorative:wght@400;700&family=UnifrakturMaguntia&family=Playfair+Display:wght@400;700&family=Orbitron:wght@400;600&family=IM+Fell+English+SC&family=Henny+Penny&display=swap">
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+
+<header class="site">
+  <div class="row">
+    <a class="logo" href="#/">Inkworlds</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#/library" data-nav="library">Library</a>
+      <a href="#/discover" data-nav="discover">Discover</a>
+      <a href="#/communities" data-nav="communities">Communities</a>
+      <a href="#/worlds" data-nav="worlds">Worlds</a>
+      <a href="#/highlights" data-nav="highlights">Highlights</a>
+      <a href="#/stats" data-nav="stats">Reading stats</a>
+      <a href="#/settings" data-nav="settings">Settings</a>
+    </nav>
+    <div class="acct" id="acct"></div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<div id="reader" hidden>
+  <header class="topbar" id="topbar">
+    <div class="row">
+      <button class="tb" id="backBtn" type="button" aria-label="Back to book page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span class="lbl">Book</span>
+      </button>
+      <button class="tb" id="tocBtn" type="button" aria-label="Contents, bookmarks, highlights and search" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Contents</span>
+      </button>
+      <div class="where"><div class="bt" id="bookTitle"></div><div class="ct" id="chapTitle"></div></div>
+      <button class="tb" id="soundBtn" type="button" aria-pressed="false" aria-label="Ambient sound">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg><span class="lbl">Sound</span>
+      </button>
+      <button class="tb" id="markBtn" type="button" aria-label="Bookmark this page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg><span class="lbl">Bookmark</span>
+      </button>
+      <button class="tb" id="compBtn" type="button" aria-expanded="false" hidden aria-label="Story companion">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg><span class="lbl">Companion</span>
+      </button>
+      <button class="tb" id="setBtn" type="button" aria-label="Reading settings" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span class="lbl">Settings</span>
+      </button>
+    </div>
+    <div class="progress"><i id="progBar"></i></div>
+  </header>
+  <div class="pages" id="pages"></div>
+
+  <div class="scrim" id="scrim" hidden></div>
+  <nav class="drawer" id="drawer" aria-label="Book navigation">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="toc" aria-selected="true">Contents</button>
+      <button role="tab" data-tab="marks" aria-selected="false">Bookmarks</button>
+      <button role="tab" data-tab="hls" aria-selected="false">Highlights</button>
+      <button role="tab" data-tab="find" aria-selected="false">Search</button>
+    </div>
+    <div id="tabBody"></div>
+  </nav>
+
+  <section class="sheet" id="sheet" hidden aria-label="Reading settings">
+    <h3>Reading settings</h3>
+    <div class="field">
+      <label class="cap" for="themeSel">World</label>
+      <select id="themeSel"></select>
+      <p class="why" id="themeWhy"></p>
+    </div>
+    <div class="field" id="aiField" hidden>
+      <button class="btn ghost" id="aiBtn" type="button">Let Claude choose the world</button>
+      <p class="why" id="aiNote">Sends the title and opening pages to Claude.</p>
+    </div>
+    <div class="field"><label class="cap" for="fsRange">Text size</label><input type="range" id="fsRange" min="15" max="26" step="1"></div>
+    <div class="field"><label class="cap" for="volRange">Sound volume</label><input type="range" id="volRange" min="0" max="100" step="1"></div>
+    <div class="field"><label class="check"><input type="checkbox" id="handAll"><span>Handwrite the whole book<br><span class="why">Letters and diary entries are always handwritten.</span></span></label></div>
+    <div class="field"><label class="check"><input type="checkbox" id="motionOn"><span>Animate the background</span></label></div>
+  </section>
+
+  <section class="sheet" id="comp" hidden aria-label="Story companion">
+    <h3>Story companion</h3>
+    <p class="why" style="margin-top:-.5rem">Answers use only the pages you've read so far, so nothing ahead gets spoiled. The pages you've read are sent to Claude to answer.</p>
+    <div class="actions" style="margin:.9rem 0"><button class="btn" id="recapBtn" type="button">Catch me up</button></div>
+    <div class="field">
+      <label class="cap" for="askIn">Ask about a character, place or event</label>
+      <input class="input" id="askIn" placeholder="Who is Dr. Halloran?" autocomplete="off">
+    </div>
+    <div class="actions"><button class="btn ghost" id="askBtn" type="button">Ask</button></div>
+    <div class="answer" id="answer" aria-live="polite"></div>
+  </section>
+
+  <section class="sheet" id="pcSheet" hidden aria-label="Comments on this passage">
+    <h3>Comments on this passage</h3>
+    <p id="pcQuote" hidden></p>
+    <div class="thread" id="pcList"></div>
+    <div class="field"><label class="cap" for="pcText">Add a comment</label><textarea id="pcText" rows="3" maxlength="2000"></textarea></div>
+    <div class="actions"><button class="btn" id="pcPost" type="button">Post comment</button></div>
+    <p class="why" id="pcNote"></p>
+  </section>
+
+  <div class="selpop" id="selpop" hidden>
+    <button type="button" id="hlBtn">Highlight</button>
+    <button type="button" id="noteBtn">Add note</button>
+    <button type="button" id="cmtBtn" hidden>Comment</button>
+  </div>
+</div>
+
+<dialog class="modal" id="noteDlg">
+  <h2 id="noteTitle">Add a note</h2>
+  <p class="muted" id="noteQuote" style="font-style:italic;margin-top:0"></p>
+  <textarea id="noteText" aria-label="Note"></textarea>
+  <div class="actions"><button class="btn ghost" id="noteDel" type="button" hidden>Remove highlight</button><button class="btn ghost" id="noteCancel" type="button">Cancel</button><button class="btn" id="noteSave" type="button">Save note</button></div>
+</dialog>
+<dialog class="modal" id="cardDlg">
+  <h2>Quote card</h2>
+  <img id="cardImg" alt="Quote card preview">
+  <div class="actions"><button class="btn ghost" id="cardClose" type="button">Close</button><button class="btn" id="cardSave" type="button">Save image</button></div>
+</dialog>
+
+<input type="file" id="fileIn" accept=".pdf,.txt,application/pdf,text/plain" hidden>
+<div class="drop-veil" id="dropVeil" hidden>Drop the book to add it to your library</div>
+<div class="busy" id="busy" hidden><div><div id="busyText">Reading your book…</div><div class="meter"><i id="busyBar"></i></div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
