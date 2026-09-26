@@ -36,13 +36,15 @@ export class Renderer {
     this.cv.width = Math.round(w * this.dpr);
     this.cv.height = Math.round(h * this.dpr);
     this.c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    if (this.name) this.st = SCENES[this.name].init(w, h);
+    if (this.name) this.st = SCENES[this.name].init(w, h, { full: this.full });
   }
   set(name) {
     this.name = name;
     this.rain = [];
     this.resize();
     this.t = 6;
+    // Still images (fixed size) skip a world's intro animation, if it has one.
+    if (this.fixed && this.st && SCENES[name].settle) SCENES[name].settle(this.st);
     for (let i = 0; i < 14; i++) this.frame(0.12);
   }
   start() {
