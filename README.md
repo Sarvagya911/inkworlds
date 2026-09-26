@@ -180,3 +180,4 @@ inkworlds/
 **Dependency direction:** `pages/` and `reader/` use `app/`, `components/`, `services/` and `engine/`. `services/` only talks to Supabase. `engine/` has no knowledge of the UI or the database, so the parser and scenes can be tested on their own.
 
 Run `npm run format` to keep the code style consistent (Prettier).
+
