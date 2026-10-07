@@ -129,7 +129,7 @@
 
 .book-grid {
   display: grid;
-  grid-template-columns: minmax(14rem, 21rem) 1fr;
+  grid-template-columns: minmax(14rem, 21rem) minmax(0, 1fr);
   gap: clamp(1.5rem, 5vw, 3.5rem);
   align-items: start;
 }
@@ -237,36 +237,80 @@
   color: var(--muted);
 }
 
+
+/* ---------- Mood timeline ---------- */
+
 .moodline {
   display: flex;
-  height: 22px;
-  border-radius: 6px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+
+  padding: 3px;
+
+  border-radius: 9px;
   overflow: hidden;
-  margin: 0.6rem 0 0.5rem;
-  gap: 2px;
+
+  margin: 0.7rem 0 0.65rem;
+
+  background: var(--card);
+  border: 1px solid var(--line);
+
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+
+  gap: 0;
 }
 
 .moodline a {
   display: block;
-  min-width: 4px;
-}
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 1.1rem;
-  font-size: 0.86rem;
-  color: var(--muted);
-}
+  min-width: 0;
+  min-inline-size: 0;
 
-.legend i {
-  display: inline-block;
-  width: 0.8em;
-  height: 0.8em;
+  flex-basis: 0;
+  flex-shrink: 1;
+
+  position: relative;
+
   border-radius: 2px;
-  margin-right: 0.35em;
-  vertical-align: -0.05em;
+
+  /*
+   * Very subtle separation between chapter segments.
+   * This stays subtle even when a book has hundreds
+   * of chapters.
+   */
+  box-shadow:
+    inset -1px 0 rgba(255, 255, 255, 0.12);
+
+  transition:
+    filter 140ms ease,
+    transform 140ms ease,
+    opacity 140ms ease;
+
+  cursor: pointer;
 }
+
+.moodline a:hover {
+  filter: brightness(1.18) saturate(1.08);
+  transform: scaleY(1.22);
+  z-index: 2;
+}
+
+/*
+ * When hovering one chapter, slightly fade the others.
+ * This makes the timeline feel interactive without
+ * changing the underlying chapter data.
+ */
+.moodline:has(a:hover) a:not(:hover) {
+  opacity: 0.72;
+}
+
+
+/* ---------- Mood colours ---------- */
 
 .m-stormy {
   background: #4b6b8f;
@@ -283,6 +327,50 @@
 .m-calm {
   background: #8fa38a;
 }
+
+
+/* ---------- Mood legend ---------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 0.2rem 0.55rem;
+
+  border: 1px solid var(--line);
+  border-radius: 999px;
+
+  background: color-mix(
+    in srgb,
+    var(--card) 72%,
+    transparent
+  );
+}
+
+.legend i {
+  display: inline-block;
+
+  width: 0.65rem;
+  height: 0.65rem;
+
+  flex: 0 0 0.65rem;
+
+  border-radius: 2px;
+
+  margin-right: 0.4rem;
+}
+
+
+/* ---------- Sub sections ---------- */
 
 .sub-block {
   margin-top: 2.2rem;
@@ -307,6 +395,9 @@
   font-size: 0.92rem;
 }
 
+
+/* ---------- Mobile ---------- */
+
 @media (max-width: 640px) {
   .facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -324,5 +415,20 @@
 
   .sub-block {
     margin-top: 1.8rem;
+  }
+
+  .moodline {
+    height: 26px;
+    border-radius: 8px;
+    padding: 2px;
+  }
+
+  .legend {
+    gap: 0.35rem 0.55rem;
+    font-size: 0.8rem;
+  }
+
+  .legend span {
+    padding: 0.18rem 0.45rem;
   }
 }
