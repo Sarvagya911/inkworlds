@@ -419,3 +419,80 @@ where not exists (select 1 from public.communities where name = 'Gothic Night Re
 insert into public.communities (name, description, theme, owner_id)
 select 'Worldbuilders'' Guild', 'For readers of fantasy and magic. Share favourite spells, maps and apprentices.', 'parchment', null
 where not exists (select 1 from public.communities where name = 'Worldbuilders'' Guild');
+
+-- ============================================================
+-- INKWORLDS — BOOK COVER SUPPORT
+-- ============================================================
+
+-- Add cover path to books.
+alter table public.books
+add column if not exists cover_path text;
+
+-- ------------------------------------------------------------
+-- Storage bucket for book covers
+-- ------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('book-covers', 'book-covers', true, 10485760)
+on conflict (id) do update
+set
+  public = true,
+  file_size_limit = 10485760;
+
+-- ------------------------------------------------------------
+-- Read policy
+-- Owners can read their own covers.
+-- Covers belonging to public books can also be read.
+-- ------------------------------------------------------------
+
+drop policy if exists "book cover read" on storage.objects;
+
+create policy "book cover read"
+on storage.objects
+for select
+to anon, authenticated
+using (
+  bucket_id = 'book-covers'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or exists (
+      select 1
+      from public.books b
+      where b.cover_path = storage.objects.name
+        and b.visibility = 'public'
+    )
+  )
+);
+
+-- ------------------------------------------------------------
+-- Upload policy
+-- ------------------------------------------------------------
+
+drop policy if exists "book cover write" on storage.objects;
+
+create policy "book cover write"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'book-covers'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- ------------------------------------------------------------
+-- Delete policy
+-- ------------------------------------------------------------
+
+drop policy if exists "book cover delete" on storage.objects;
+
+create policy "book cover delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'book-covers'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+-- Refresh PostgREST schema cache.
+notify pgrst, 'reload schema';
