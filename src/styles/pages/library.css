@@ -476,39 +476,112 @@
   }
 }
 
-/* ---------- Mobile ---------- */
+/* ---------- Mobile bookshelf ---------- */
 
 @media (max-width: 600px) {
   .shelf {
-    align-items: flex-end;
+    /*
+     * Mobile gets a little more vertical room because
+     * wrapped books are displayed as separate shelf tiers.
+     */
+    min-height: 0;
+    padding: 1.2rem 1rem 0;
 
     /*
-     * Keep all wrapped rows packed against
-     * the bottom of the shelf instead of
-     * distributing them through the available
-     * shelf height.
+     * Keep the rows packed normally.
+     * We create the visual shelf tiers below
+     * instead of relying on one bottom plank.
      */
-    align-content: flex-end;
+    align-items: flex-end;
+    align-content: flex-start;
 
     row-gap: 0.35rem;
+
+    /*
+     * Remove the desktop bottom plank from the
+     * mobile version. The individual row ledges
+     * below replace it.
+     */
+    background: transparent;
   }
 
+  /*
+   * Each wrapped book/category group becomes a
+   * little shelf section.
+   */
   .spine-item {
     position: relative;
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 auto;
+
+    /*
+     * Leave room for the wooden ledge.
+     */
+    padding-bottom: 12px;
   }
 
   .spine-item .spine {
     margin-bottom: 18px;
   }
 
+  /*
+   * Keep the category exactly underneath
+   * the corresponding book.
+   */
   .spine-category {
-    display: block;
     position: absolute;
     left: 50%;
     bottom: 0;
     transform: translateX(-50%);
     margin: 0;
+    z-index: 2;
+  }
+
+  /*
+   * Wooden ledge beneath each book.
+   *
+   * Because each spine-item owns its own ledge,
+   * every wrapped row has a visible shelf beneath it.
+   */
+  .spine-item::after {
+    content: '';
+    position: absolute;
+    left: -0.45rem;
+    right: -0.45rem;
+    bottom: 0;
+    height: 9px;
+    border-radius: 2px;
+    background:
+      linear-gradient(
+        180deg,
+        var(--wood) 0%,
+        var(--wood-dark) 100%
+      );
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.22);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /*
+   * The final bottom row gets a wider continuous
+   * wooden base so the shelf still feels like one
+   * piece of furniture.
+   */
+  .shelf::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -10px;
+    height: 10px;
+    background: linear-gradient(
+      rgba(0, 0, 0, 0.28),
+      transparent
+    );
+    pointer-events: none;
   }
 
   .upload-type-overlay {
