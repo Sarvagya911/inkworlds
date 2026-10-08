@@ -231,6 +231,214 @@ export function spineHTML(
   `;
 }
 
+function showUploadTypePicker() {
+  const existing =
+    document.getElementById(
+      'uploadTypePicker'
+    );
+
+  if (existing) {
+    existing.remove();
+  }
+
+  const overlay =
+    document.createElement('div');
+
+  overlay.id =
+    'uploadTypePicker';
+
+  overlay.className =
+    'upload-type-overlay';
+
+  overlay.innerHTML = `
+    <div
+      class="upload-type-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="uploadTypeTitle"
+    >
+
+      <button
+        class="upload-type-close"
+        id="uploadTypeClose"
+        type="button"
+        aria-label="Close"
+      >
+        ×
+      </button>
+
+      <div class="upload-type-heading">
+
+        <span class="upload-type-kicker">
+          Add to your library
+        </span>
+
+        <h2 id="uploadTypeTitle">
+          What are you adding?
+        </h2>
+
+        <p>
+          Choose the kind of story you're about to
+          upload.
+        </p>
+
+      </div>
+
+      <div
+        class="upload-type-options"
+        role="list"
+      >
+
+        <button
+          class="upload-type-option"
+          type="button"
+          data-upload-type="${CONTENT_TYPES.BOOK}"
+        >
+          <span class="upload-type-icon">
+            📖
+          </span>
+
+          <span class="upload-type-copy">
+            <strong>Novel</strong>
+            <small>
+              Traditional prose fiction
+            </small>
+          </span>
+
+          <span class="upload-type-arrow">
+            →
+          </span>
+        </button>
+
+        <button
+          class="upload-type-option"
+          type="button"
+          data-upload-type="${CONTENT_TYPES.LIGHT_NOVEL}"
+        >
+          <span class="upload-type-icon">
+            ✨
+          </span>
+
+          <span class="upload-type-copy">
+            <strong>Light Novel</strong>
+            <small>
+              Japanese-style light fiction
+            </small>
+          </span>
+
+          <span class="upload-type-arrow">
+            →
+          </span>
+        </button>
+
+        <button
+          class="upload-type-option"
+          type="button"
+          data-upload-type="${CONTENT_TYPES.MANGA}"
+        >
+          <span class="upload-type-icon">
+            🖼️
+          </span>
+
+          <span class="upload-type-copy">
+            <strong>Manga</strong>
+            <small>
+              Manga and illustrated stories
+            </small>
+          </span>
+
+          <span class="upload-type-arrow">
+            →
+          </span>
+        </button>
+
+      </div>
+
+      <button
+        class="upload-type-cancel"
+        id="uploadTypeCancel"
+        type="button"
+      >
+        Cancel
+      </button>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const close = () => {
+    overlay.classList.add(
+      'is-closing'
+    );
+
+    setTimeout(() => {
+      overlay.remove();
+    }, 150);
+  };
+
+  const openFilePicker = type => {
+    setUploadContentType(type);
+    close();
+
+    setTimeout(() => {
+      $('fileIn').click();
+    }, 120);
+  };
+
+  overlay
+    .querySelectorAll(
+      '[data-upload-type]'
+    )
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => {
+          openFilePicker(
+            button.dataset.uploadType
+          );
+        }
+      );
+    });
+
+  $('uploadTypeClose')
+    .addEventListener(
+      'click',
+      close
+    );
+
+  $('uploadTypeCancel')
+    .addEventListener(
+      'click',
+      close
+    );
+
+  overlay.addEventListener(
+    'click',
+    e => {
+      if (e.target === overlay) {
+        close();
+      }
+    }
+  );
+
+  const onKeyDown = e => {
+    if (e.key === 'Escape') {
+      close();
+
+      document.removeEventListener(
+        'keydown',
+        onKeyDown
+      );
+    }
+  };
+
+  document.addEventListener(
+    'keydown',
+    onKeyDown
+  );
+}
+
 export async function viewLibrary() {
   const rid = routeId;
 
@@ -349,34 +557,7 @@ export async function viewLibrary() {
         return;
       }
 
-      const choice = window.prompt(
-        'What are you adding?\n\n' +
-        '1 = Novel\n' +
-        '2 = Light Novel\n' +
-        '3 = Manga'
-      );
-
-      if (choice === null) {
-        return;
-      }
-
-      const value =
-        choice.trim();
-
-      let type =
-        CONTENT_TYPES.BOOK;
-
-      if (value === '2') {
-        type =
-          CONTENT_TYPES.LIGHT_NOVEL;
-      } else if (value === '3') {
-        type =
-          CONTENT_TYPES.MANGA;
-      }
-
-      setUploadContentType(type);
-
-      $('fileIn').click();
+      showUploadTypePicker();
     }
   );
 
