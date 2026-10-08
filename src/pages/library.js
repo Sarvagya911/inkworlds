@@ -76,7 +76,7 @@
 // }
 
 
-// Your library shelf.
+// Your library shelves.
 
 import {
   sampleMeta,
@@ -145,21 +145,16 @@ function typeOf(book) {
   );
 }
 
-export function spineHTML(
-  book,
-  showCategory = false
-) {
+export function spineHTML(book) {
   const th = THEMES[themeOf(book)];
 
   const hash = [...book.id].reduce(
-    (a, ch) =>
-      a + ch.charCodeAt(0),
+    (a, ch) => a + ch.charCodeAt(0),
     0
   );
 
   const pct = Math.round(
-    ((progOf(book.id) || {}).pct || 0) *
-      100
+    ((progOf(book.id) || {}).pct || 0) * 100
   );
 
   const style = `
@@ -172,16 +167,14 @@ export function spineHTML(
     --s1:${th.spine[0]};
     --s2:${th.spine[1]};
     --s3:${th.spine[2]};
-    --sf:${esc(
-      fontStack(th.title, 'title')
-    )};
+    --sf:${esc(fontStack(th.title, 'title'))};
   `;
 
   const pub =
     book.visibility === 'public' &&
     !book.sample;
 
-  const spine = `
+  return `
     <a
       class="spine"
       href="#/book/${enc(book.id)}"
@@ -189,9 +182,7 @@ export function spineHTML(
       aria-label="${esc(book.title)}${
         pub ? ', public' : ''
       }${
-        pct
-          ? `, ${pct}% read`
-          : ''
+        pct ? `, ${pct}% read` : ''
       }"
     >
       ${
@@ -211,24 +202,6 @@ export function spineHTML(
       }
     </a>
   `;
-
-  if (!showCategory) {
-    return spine;
-  }
-
-  return `
-    <div class="spine-item">
-      ${spine}
-
-      <span class="spine-category">
-        ${esc(
-          contentTypeLabel(
-            typeOf(book)
-          )
-        )}
-      </span>
-    </div>
-  `;
 }
 
 function showUploadTypePicker() {
@@ -244,9 +217,7 @@ function showUploadTypePicker() {
   const overlay =
     document.createElement('div');
 
-  overlay.id =
-    'uploadTypePicker';
-
+  overlay.id = 'uploadTypePicker';
   overlay.className =
     'upload-type-overlay';
 
@@ -257,7 +228,6 @@ function showUploadTypePicker() {
       aria-modal="true"
       aria-labelledby="uploadTypeTitle"
     >
-
       <button
         class="upload-type-close"
         id="uploadTypeClose"
@@ -268,7 +238,6 @@ function showUploadTypePicker() {
       </button>
 
       <div class="upload-type-heading">
-
         <span class="upload-type-kicker">
           Add to your library
         </span>
@@ -281,14 +250,12 @@ function showUploadTypePicker() {
           Choose the kind of story you're about to
           upload.
         </p>
-
       </div>
 
       <div
         class="upload-type-options"
         role="list"
       >
-
         <button
           class="upload-type-option"
           type="button"
@@ -351,7 +318,6 @@ function showUploadTypePicker() {
             →
           </span>
         </button>
-
       </div>
 
       <button
@@ -361,16 +327,13 @@ function showUploadTypePicker() {
       >
         Cancel
       </button>
-
     </div>
   `;
 
   document.body.appendChild(overlay);
 
   const close = () => {
-    overlay.classList.add(
-      'is-closing'
-    );
+    overlay.classList.add('is-closing');
 
     setTimeout(() => {
       overlay.remove();
@@ -401,17 +364,15 @@ function showUploadTypePicker() {
       );
     });
 
-  $('uploadTypeClose')
-    .addEventListener(
-      'click',
-      close
-    );
+  $('uploadTypeClose').addEventListener(
+    'click',
+    close
+  );
 
-  $('uploadTypeCancel')
-    .addEventListener(
-      'click',
-      close
-    );
+  $('uploadTypeCancel').addEventListener(
+    'click',
+    close
+  );
 
   overlay.addEventListener(
     'click',
@@ -437,6 +398,46 @@ function showUploadTypePicker() {
     'keydown',
     onKeyDown
   );
+}
+
+/* ---------- Shelf rendering ---------- */
+
+function renderShelf(
+  title,
+  books,
+  emptyMessage = ''
+) {
+  if (!books.length) {
+    if (!emptyMessage) {
+      return '';
+    }
+
+    return `
+      <div class="shelf-block">
+        <h2 class="section-title">
+          ${esc(title)}
+        </h2>
+
+        <div class="shelf">
+          <p class="empty">
+            ${esc(emptyMessage)}
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="shelf-block">
+      <h2 class="section-title">
+        ${esc(title)}
+      </h2>
+
+      <div class="shelf">
+        ${books.map(spineHTML).join('')}
+      </div>
+    </div>
+  `;
 }
 
 export async function viewLibrary() {
@@ -482,7 +483,7 @@ export async function viewLibrary() {
       <div class="shelf-block">
 
         <h2 class="section-title">
-          Your shelf
+          Your library
         </h2>
 
         <div
@@ -497,9 +498,7 @@ export async function viewLibrary() {
                   type="button"
                   role="tab"
                   data-lib-type="${esc(tab.id)}"
-                  aria-selected="${
-                    tab.id === ''
-                  }"
+                  aria-selected="${tab.id === ''}"
                 >
                   ${esc(tab.label)}
                 </button>
@@ -529,12 +528,7 @@ export async function viewLibrary() {
 
         <div class="shelf">
           ${SAMPLES
-            .map(s =>
-              spineHTML(
-                sampleMeta(s),
-                true
-              )
-            )
+            .map(s => spineHTML(sampleMeta(s)))
             .join('')}
         </div>
 
@@ -547,13 +541,8 @@ export async function viewLibrary() {
     'click',
     () => {
       if (!signedIn()) {
-        rememberDestination(
-          '#/library'
-        );
-
-        location.hash =
-          '#/signin';
-
+        rememberDestination('#/library');
+        location.hash = '#/signin';
         return;
       }
 
@@ -563,18 +552,14 @@ export async function viewLibrary() {
 
   if (!signedIn()) {
     $('mine').innerHTML =
-      signInGate(
-        'build your library'
-      );
-
+      signInGate('build your library');
     return;
   }
 
   let mine = [];
 
   try {
-    mine =
-      await cloud.myBooks();
+    mine = await cloud.myBooks();
   } catch (e) {
     if (rid === routeId) {
       $('mine').innerHTML = `
@@ -599,7 +584,7 @@ export async function viewLibrary() {
         id="libSearch"
         type="search"
         placeholder="Search by title or author"
-        aria-label="Search your shelf"
+        aria-label="Search your library"
       >
 
       <select
@@ -631,89 +616,150 @@ export async function viewLibrary() {
       A dot on the spine means it's public.
     </p>
 
-    <div
-      class="shelf"
-      id="shelfMine"
-    ></div>
+    <div id="libraryShelves"></div>
   `;
 
-  const draw = () => {
-    const q =
-      $('libSearch')
-        .value
-        .trim()
-        .toLowerCase();
+  const sortBooks = books => {
+    const sort = $('libSort').value;
+    const p = b => progOf(b.id) || {};
 
-    const sort =
-      $('libSort').value;
-
-    const p =
-      b => progOf(b.id) || {};
-
-    const list =
-      mine.filter(book => {
-        const matchesType =
-          !contentType ||
-          typeOf(book) ===
-            contentType;
-
-        const matchesSearch =
-          !q ||
-          (
-            book.title +
-            ' ' +
-            book.author
-          )
-            .toLowerCase()
-            .includes(q);
-
-        return (
-          matchesType &&
-          matchesSearch
-        );
-      });
+    const list = [...books];
 
     list.sort(
       (a, b) =>
         sort === 'title'
-          ? a.title.localeCompare(
-              b.title
-            )
-
+          ? a.title.localeCompare(b.title)
           : sort === 'progress'
             ? (p(b).pct || 0) -
               (p(a).pct || 0)
-
             : sort === 'read'
               ? (p(b).updated || 0) -
                 (p(a).updated || 0)
-
               : b.added - a.added
     );
 
-    const showCategory =
-      contentType === '';
+    return list;
+  };
 
-    $('shelfMine').innerHTML =
-      list.length
-        ? list
-            .map(book =>
-              spineHTML(
-                book,
-                showCategory
-              )
-            )
-            .join('')
+  const draw = () => {
+    const q = $('libSearch')
+      .value
+      .trim()
+      .toLowerCase();
 
-        : `
-          <p class="empty">
-            ${
-              mine.length
-                ? 'No titles match that search or category.'
-                : 'Your shelf is empty. Add a PDF or text file to start, or open a sample below.'
-            }
-          </p>
+    const searched = !q
+      ? mine
+      : mine.filter(book =>
+          (
+            (book.title || '') +
+            ' ' +
+            (book.author || '')
+          )
+            .toLowerCase()
+            .includes(q)
+        );
+
+    const sorted = sortBooks(searched);
+
+    const novels = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.BOOK
+    );
+
+    const lightNovels = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.LIGHT_NOVEL
+    );
+
+    const manga = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.MANGA
+    );
+
+    const shelves =
+      $('libraryShelves');
+
+    /*
+     * ALL:
+     * Show three separate physical shelves.
+     * Empty categories are hidden.
+     */
+    if (contentType === '') {
+      if (!sorted.length) {
+        shelves.innerHTML = `
+          <div class="shelf-block">
+            <div class="shelf">
+              <p class="empty">
+                ${
+                  mine.length
+                    ? 'No titles match that search.'
+                    : 'Your library is empty. Add a PDF or text file to start, or open a sample below.'
+                }
+              </p>
+            </div>
+          </div>
         `;
+
+        return;
+      }
+
+      shelves.innerHTML = [
+        renderShelf(
+          'Novels',
+          novels
+        ),
+        renderShelf(
+          'Light Novels',
+          lightNovels
+        ),
+        renderShelf(
+          'Manga',
+          manga
+        )
+      ]
+        .filter(Boolean)
+        .join('');
+
+      return;
+    }
+
+    /*
+     * CATEGORY:
+     * Show only the selected category.
+     * No category label is placed under
+     * individual books.
+     */
+    let selected = [];
+    let selectedTitle = '';
+
+    if (
+      contentType ===
+      CONTENT_TYPES.BOOK
+    ) {
+      selected = novels;
+      selectedTitle = 'Novels';
+    } else if (
+      contentType ===
+      CONTENT_TYPES.LIGHT_NOVEL
+    ) {
+      selected = lightNovels;
+      selectedTitle = 'Light Novels';
+    } else if (
+      contentType ===
+      CONTENT_TYPES.MANGA
+    ) {
+      selected = manga;
+      selectedTitle = 'Manga';
+    }
+
+    shelves.innerHTML = renderShelf(
+      selectedTitle,
+      selected,
+      `You don't have any ${selectedTitle.toLowerCase()} yet.`
+    );
   };
 
   document
@@ -725,38 +771,33 @@ export async function viewLibrary() {
         'click',
         () => {
           contentType =
-            btn.dataset.libType ||
-            '';
+            btn.dataset.libType || '';
 
           document
             .querySelectorAll(
               '[data-lib-type]'
             )
-            .forEach(tab =>
+            .forEach(tab => {
               tab.setAttribute(
                 'aria-selected',
-                String(
-                  tab === btn
-                )
-              )
-            );
+                String(tab === btn)
+              );
+            });
 
           draw();
         }
       );
     });
 
-  $('libSearch')
-    .addEventListener(
-      'input',
-      draw
-    );
+  $('libSearch').addEventListener(
+    'input',
+    draw
+  );
 
-  $('libSort')
-    .addEventListener(
-      'change',
-      draw
-    );
+  $('libSort').addEventListener(
+    'change',
+    draw
+  );
 
   draw();
 }
