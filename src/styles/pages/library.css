@@ -212,7 +212,6 @@
 /* ---------- Content type labels ---------- */
 
 .spine-item {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -450,8 +449,6 @@
   color: var(--text);
 }
 
-/* ---------- Animations ---------- */
-
 @keyframes uploadOverlayIn {
   from {
     opacity: 0;
@@ -476,39 +473,28 @@
   }
 }
 
-/* ---------- Mobile ---------- */
+/* ---------- Mobile bookshelf ---------- */
 
 @media (max-width: 600px) {
+  /*
+   * Keep the bookshelf as ONE row on mobile.
+   *
+   * Instead of wrapping books into a second row,
+   * the shelf becomes horizontally scrollable.
+   * This keeps every book sitting on the same
+   * physical wooden shelf.
+   */
   .shelf {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
     align-items: flex-end;
-
-    /*
-     * Keep all wrapped rows packed against
-     * the bottom of the shelf instead of
-     * distributing them through the available
-     * shelf height.
-     */
-    align-content: flex-end;
-
-    row-gap: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 
   .spine-item {
-    position: relative;
-    display: block;
-  }
-
-  .spine-item .spine {
-    margin-bottom: 18px;
-  }
-
-  .spine-category {
-    display: block;
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    margin: 0;
+    flex: 0 0 auto;
   }
 
   .upload-type-overlay {
