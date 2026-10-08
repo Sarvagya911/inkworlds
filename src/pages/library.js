@@ -76,7 +76,7 @@
 // }
 
 
-// Your library shelf.
+// Your library shelves.
 
 import {
   sampleMeta,
@@ -139,27 +139,19 @@ const TYPE_TABS = [
 ];
 
 function typeOf(book) {
-  return (
-    book.contentType ||
-    CONTENT_TYPES.BOOK
-  );
+  return book.contentType || CONTENT_TYPES.BOOK;
 }
 
-export function spineHTML(
-  book,
-  showCategory = false
-) {
+export function spineHTML(book) {
   const th = THEMES[themeOf(book)];
 
   const hash = [...book.id].reduce(
-    (a, ch) =>
-      a + ch.charCodeAt(0),
+    (a, ch) => a + ch.charCodeAt(0),
     0
   );
 
   const pct = Math.round(
-    ((progOf(book.id) || {}).pct || 0) *
-      100
+    ((progOf(book.id) || {}).pct || 0) * 100
   );
 
   const style = `
@@ -172,16 +164,14 @@ export function spineHTML(
     --s1:${th.spine[0]};
     --s2:${th.spine[1]};
     --s3:${th.spine[2]};
-    --sf:${esc(
-      fontStack(th.title, 'title')
-    )};
+    --sf:${esc(fontStack(th.title, 'title'))};
   `;
 
   const pub =
     book.visibility === 'public' &&
     !book.sample;
 
-  const spine = `
+  return `
     <a
       class="spine"
       href="#/book/${enc(book.id)}"
@@ -189,9 +179,7 @@ export function spineHTML(
       aria-label="${esc(book.title)}${
         pub ? ', public' : ''
       }${
-        pct
-          ? `, ${pct}% read`
-          : ''
+        pct ? `, ${pct}% read` : ''
       }"
     >
       ${
@@ -211,31 +199,11 @@ export function spineHTML(
       }
     </a>
   `;
-
-  if (!showCategory) {
-    return spine;
-  }
-
-  return `
-    <div class="spine-item">
-      ${spine}
-
-      <span class="spine-category">
-        ${esc(
-          contentTypeLabel(
-            typeOf(book)
-          )
-        )}
-      </span>
-    </div>
-  `;
 }
 
 function showUploadTypePicker() {
   const existing =
-    document.getElementById(
-      'uploadTypePicker'
-    );
+    document.getElementById('uploadTypePicker');
 
   if (existing) {
     existing.remove();
@@ -244,9 +212,7 @@ function showUploadTypePicker() {
   const overlay =
     document.createElement('div');
 
-  overlay.id =
-    'uploadTypePicker';
-
+  overlay.id = 'uploadTypePicker';
   overlay.className =
     'upload-type-overlay';
 
@@ -257,7 +223,6 @@ function showUploadTypePicker() {
       aria-modal="true"
       aria-labelledby="uploadTypeTitle"
     >
-
       <button
         class="upload-type-close"
         id="uploadTypeClose"
@@ -268,7 +233,6 @@ function showUploadTypePicker() {
       </button>
 
       <div class="upload-type-heading">
-
         <span class="upload-type-kicker">
           Add to your library
         </span>
@@ -281,14 +245,12 @@ function showUploadTypePicker() {
           Choose the kind of story you're about to
           upload.
         </p>
-
       </div>
 
       <div
         class="upload-type-options"
         role="list"
       >
-
         <button
           class="upload-type-option"
           type="button"
@@ -351,7 +313,6 @@ function showUploadTypePicker() {
             →
           </span>
         </button>
-
       </div>
 
       <button
@@ -361,16 +322,13 @@ function showUploadTypePicker() {
       >
         Cancel
       </button>
-
     </div>
   `;
 
   document.body.appendChild(overlay);
 
   const close = () => {
-    overlay.classList.add(
-      'is-closing'
-    );
+    overlay.classList.add('is-closing');
 
     setTimeout(() => {
       overlay.remove();
@@ -387,40 +345,30 @@ function showUploadTypePicker() {
   };
 
   overlay
-    .querySelectorAll(
-      '[data-upload-type]'
-    )
+    .querySelectorAll('[data-upload-type]')
     .forEach(button => {
-      button.addEventListener(
-        'click',
-        () => {
-          openFilePicker(
-            button.dataset.uploadType
-          );
-        }
-      );
+      button.addEventListener('click', () => {
+        openFilePicker(
+          button.dataset.uploadType
+        );
+      });
     });
 
-  $('uploadTypeClose')
-    .addEventListener(
-      'click',
-      close
-    );
-
-  $('uploadTypeCancel')
-    .addEventListener(
-      'click',
-      close
-    );
-
-  overlay.addEventListener(
+  $('uploadTypeClose').addEventListener(
     'click',
-    e => {
-      if (e.target === overlay) {
-        close();
-      }
-    }
+    close
   );
+
+  $('uploadTypeCancel').addEventListener(
+    'click',
+    close
+  );
+
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      close();
+    }
+  });
 
   const onKeyDown = e => {
     if (e.key === 'Escape') {
@@ -437,6 +385,44 @@ function showUploadTypePicker() {
     'keydown',
     onKeyDown
   );
+}
+
+function shelfHTML(
+  title,
+  books,
+  emptyMessage = ''
+) {
+  if (!books.length) {
+    if (!emptyMessage) {
+      return '';
+    }
+
+    return `
+      <div class="shelf-block">
+        <h2 class="section-title">
+          ${esc(title)}
+        </h2>
+
+        <div class="shelf">
+          <p class="empty">
+            ${esc(emptyMessage)}
+          </p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="shelf-block">
+      <h2 class="section-title">
+        ${esc(title)}
+      </h2>
+
+      <div class="shelf">
+        ${books.map(spineHTML).join('')}
+      </div>
+    </div>
+  `;
 }
 
 export async function viewLibrary() {
@@ -458,7 +444,6 @@ export async function viewLibrary() {
       </p>
 
       <div class="actions">
-
         <button
           class="btn"
           id="addBtn"
@@ -476,13 +461,12 @@ export async function viewLibrary() {
           are on Project Gutenberg as
           .txt and PDF.
         </span>
-
       </div>
 
       <div class="shelf-block">
 
         <h2 class="section-title">
-          Your shelf
+          Your library
         </h2>
 
         <div
@@ -490,22 +474,16 @@ export async function viewLibrary() {
           role="tablist"
           aria-label="Library content type"
         >
-          ${TYPE_TABS
-            .map(
-              tab => `
-                <button
-                  type="button"
-                  role="tab"
-                  data-lib-type="${esc(tab.id)}"
-                  aria-selected="${
-                    tab.id === ''
-                  }"
-                >
-                  ${esc(tab.label)}
-                </button>
-              `
-            )
-            .join('')}
+          ${TYPE_TABS.map(tab => `
+            <button
+              type="button"
+              role="tab"
+              data-lib-type="${esc(tab.id)}"
+              aria-selected="${tab.id === ''}"
+            >
+              ${esc(tab.label)}
+            </button>
+          `).join('')}
         </div>
 
         <div id="mine">
@@ -529,12 +507,7 @@ export async function viewLibrary() {
 
         <div class="shelf">
           ${SAMPLES
-            .map(s =>
-              spineHTML(
-                sampleMeta(s),
-                true
-              )
-            )
+            .map(s => spineHTML(sampleMeta(s)))
             .join('')}
         </div>
 
@@ -543,38 +516,26 @@ export async function viewLibrary() {
     </section>
   `;
 
-  $('addBtn').addEventListener(
-    'click',
-    () => {
-      if (!signedIn()) {
-        rememberDestination(
-          '#/library'
-        );
-
-        location.hash =
-          '#/signin';
-
-        return;
-      }
-
-      showUploadTypePicker();
+  $('addBtn').addEventListener('click', () => {
+    if (!signedIn()) {
+      rememberDestination('#/library');
+      location.hash = '#/signin';
+      return;
     }
-  );
+
+    showUploadTypePicker();
+  });
 
   if (!signedIn()) {
     $('mine').innerHTML =
-      signInGate(
-        'build your library'
-      );
-
+      signInGate('build your library');
     return;
   }
 
   let mine = [];
 
   try {
-    mine =
-      await cloud.myBooks();
+    mine = await cloud.myBooks();
   } catch (e) {
     if (rid === routeId) {
       $('mine').innerHTML = `
@@ -593,13 +554,12 @@ export async function viewLibrary() {
 
   $('mine').innerHTML = `
     <div class="lib-tools">
-
       <input
         class="input"
         id="libSearch"
         type="search"
         placeholder="Search by title or author"
-        aria-label="Search your shelf"
+        aria-label="Search your library"
       >
 
       <select
@@ -610,153 +570,177 @@ export async function viewLibrary() {
         <option value="recent">
           Recently added
         </option>
-
         <option value="read">
           Recently read
         </option>
-
         <option value="title">
           Title
         </option>
-
         <option value="progress">
           Progress
         </option>
       </select>
-
     </div>
 
     <p class="sub">
-      Pick a title to see its world and chapters.
+      Choose a collection above. Your books are
+      arranged on separate shelves by type.
       A dot on the spine means it's public.
     </p>
 
-    <div
-      class="shelf"
-      id="shelfMine"
-    ></div>
+    <div id="libraryShelves"></div>
   `;
 
-  const draw = () => {
+  const sortBooks = books => {
+    const sort = $('libSort').value;
+    const progress = book =>
+      progOf(book.id) || {};
+
+    const list = [...books];
+
+    list.sort((a, b) =>
+      sort === 'title'
+        ? a.title.localeCompare(b.title)
+        : sort === 'progress'
+          ? (progress(b).pct || 0) -
+            (progress(a).pct || 0)
+          : sort === 'read'
+            ? (progress(b).updated || 0) -
+              (progress(a).updated || 0)
+            : b.added - a.added
+    );
+
+    return list;
+  };
+
+  const filterSearch = books => {
     const q =
-      $('libSearch')
-        .value
+      $('libSearch').value
         .trim()
         .toLowerCase();
 
-    const sort =
-      $('libSort').value;
+    if (!q) {
+      return books;
+    }
 
-    const p =
-      b => progOf(b.id) || {};
+    return books.filter(book =>
+      (
+        `${book.title || ''} ${book.author || ''}`
+      )
+        .toLowerCase()
+        .includes(q)
+    );
+  };
 
-    const list =
-      mine.filter(book => {
-        const matchesType =
-          !contentType ||
-          typeOf(book) ===
-            contentType;
+  const draw = () => {
+    const searched =
+      filterSearch(mine);
 
-        const matchesSearch =
-          !q ||
-          (
-            book.title +
-            ' ' +
-            book.author
-          )
-            .toLowerCase()
-            .includes(q);
+    const sorted =
+      sortBooks(searched);
 
-        return (
-          matchesType &&
-          matchesSearch
-        );
-      });
-
-    list.sort(
-      (a, b) =>
-        sort === 'title'
-          ? a.title.localeCompare(
-              b.title
-            )
-
-          : sort === 'progress'
-            ? (p(b).pct || 0) -
-              (p(a).pct || 0)
-
-            : sort === 'read'
-              ? (p(b).updated || 0) -
-                (p(a).updated || 0)
-
-              : b.added - a.added
+    const novels = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.BOOK
     );
 
-    const showCategory =
-      contentType === '';
+    const lightNovels = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.LIGHT_NOVEL
+    );
 
-    $('shelfMine').innerHTML =
-      list.length
-        ? list
-            .map(book =>
-              spineHTML(
-                book,
-                showCategory
-              )
-            )
-            .join('')
+    const manga = sorted.filter(
+      book =>
+        typeOf(book) ===
+        CONTENT_TYPES.MANGA
+    );
 
-        : `
-          <p class="empty">
-            ${
-              mine.length
-                ? 'No titles match that search or category.'
-                : 'Your shelf is empty. Add a PDF or text file to start, or open a sample below.'
-            }
-          </p>
-        `;
+    const shelves =
+      $('libraryShelves');
+
+    if (!sorted.length) {
+      shelves.innerHTML = `
+        <div class="shelf-block">
+          <div class="shelf">
+            <p class="empty">
+              ${
+                mine.length
+                  ? 'No books match that search.'
+                  : 'Your library is empty. Add a PDF or text file to start.'
+              }
+            </p>
+          </div>
+        </div>
+      `;
+
+      return;
+    }
+
+    if (contentType === '') {
+      shelves.innerHTML = [
+        shelfHTML('Novels', novels),
+        shelfHTML('Light Novels', lightNovels),
+        shelfHTML('Manga', manga)
+      ]
+        .filter(Boolean)
+        .join('');
+
+      return;
+    }
+
+    const selected =
+      contentType === CONTENT_TYPES.BOOK
+        ? novels
+        : contentType === CONTENT_TYPES.LIGHT_NOVEL
+          ? lightNovels
+          : manga;
+
+    const selectedTitle =
+      contentTypeLabel(contentType);
+
+    shelves.innerHTML = shelfHTML(
+      selectedTitle,
+      selected,
+      `You don't have any ${selectedTitle.toLowerCase()} yet.`
+    );
   };
 
   document
-    .querySelectorAll(
-      '[data-lib-type]'
-    )
-    .forEach(btn => {
-      btn.addEventListener(
+    .querySelectorAll('[data-lib-type]')
+    .forEach(button => {
+      button.addEventListener(
         'click',
         () => {
           contentType =
-            btn.dataset.libType ||
-            '';
+            button.dataset.libType || '';
 
           document
             .querySelectorAll(
               '[data-lib-type]'
             )
-            .forEach(tab =>
+            .forEach(tab => {
               tab.setAttribute(
                 'aria-selected',
-                String(
-                  tab === btn
-                )
-              )
-            );
+                String(tab === button)
+              );
+            });
 
           draw();
         }
       );
     });
 
-  $('libSearch')
-    .addEventListener(
-      'input',
-      draw
-    );
+  $('libSearch').addEventListener(
+    'input',
+    draw
+  );
 
-  $('libSort')
-    .addEventListener(
-      'change',
-      draw
-    );
+  $('libSort').addEventListener(
+    'change',
+    draw
+  );
 
   draw();
 }
