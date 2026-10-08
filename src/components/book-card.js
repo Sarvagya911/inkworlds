@@ -15,21 +15,102 @@
 // Book card used on Discover and community pages.
 import { themeOf } from '../app/books.js';
 import { enc, nameOf, nl } from '../app/helpers.js';
+import {
+  contentTypeLabel
+} from '../services/books.js';
 import { THEMES, fontStack } from '../config/themes.js';
 import { esc } from '../lib/utils.js';
 
-export function bookCard(b, ppl) {
-  const key = themeOf(b),
-    th = THEMES[key];
+export function bookCard(
+  b,
+  ppl,
+  showContentType = true
+) {
+  const key = themeOf(b);
+  const th = THEMES[key];
 
   const cover = b.coverUrl
     ? `<div class="bcover bcover-real">
-        <img src="${esc(b.coverUrl)}" alt="" loading="lazy">
+        <img
+          src="${esc(b.coverUrl)}"
+          alt=""
+          loading="lazy"
+        >
       </div>`
-    : `<div class="bcover" style="--s1:${th.spine[0]};--s2:${th.spine[1]};--s3:${th.spine[2]};--sf:${esc(fontStack(th.title, 'title'))}">${esc(b.title)}</div>`;
+    : `<div
+        class="bcover"
+        style="
+          --s1:${th.spine[0]};
+          --s2:${th.spine[1]};
+          --s3:${th.spine[2]};
+          --sf:${esc(fontStack(th.title, 'title'))}
+        "
+      >${esc(b.title)}</div>`;
 
-  return `<a class="bcard" href="#/book/${enc(b.id)}">
-    ${cover}
-    <div class="binfo"><b>${esc(b.title)}</b><span class="by">${b.author ? esc(b.author) + '. ' : ''}${esc(th.name)}</span>
-    <span class="by">${b.sample ? 'Inkworlds sample' : `Shared by ${esc(nameOf(ppl, b.ownerId))}`}${b.likeCount ? `. ${b.likeCount} like${b.likeCount === 1 ? '' : 's'}` : ''}${b.commentCount ? `. ${b.commentCount} comment${b.commentCount === 1 ? '' : 's'}` : ''}</span>${b.desc ? `<p>${nl(b.desc)}</p>` : ''}</div></a>`;
+  const typeBadge =
+    showContentType
+      ? `<span class="content-type">${esc(
+          contentTypeLabel(
+            b.contentType
+          )
+        )}</span>`
+      : '';
+
+  return `
+    <a
+      class="bcard"
+      href="#/book/${enc(b.id)}"
+    >
+      ${cover}
+
+      <div class="binfo">
+        <b>${esc(b.title)}</b>
+
+        ${typeBadge}
+
+        <span class="by">
+          ${
+            b.author
+              ? esc(b.author) + '. '
+              : ''
+          }${esc(th.name)}
+        </span>
+
+        <span class="by">
+          ${
+            b.sample
+              ? 'Inkworlds sample'
+              : `Shared by ${esc(
+                  nameOf(
+                    ppl,
+                    b.ownerId
+                  )
+                )}`
+          }${
+            b.likeCount
+              ? `. ${b.likeCount} like${
+                  b.likeCount === 1
+                    ? ''
+                    : 's'
+                }`
+              : ''
+          }${
+            b.commentCount
+              ? `. ${b.commentCount} comment${
+                  b.commentCount === 1
+                    ? ''
+                    : 's'
+                }`
+              : ''
+          }
+        </span>
+
+        ${
+          b.desc
+            ? `<p>${nl(b.desc)}</p>`
+            : ''
+        }
+      </div>
+    </a>
+  `;
 }

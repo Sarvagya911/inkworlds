@@ -165,8 +165,25 @@ import { lsGet } from '../lib/utils.js';
 import { must, sb } from './client.js';
 import { myId } from './session.js';
 
+export const CONTENT_TYPES = {
+  BOOK: 'book',
+  LIGHT_NOVEL: 'light_novel',
+  MANGA: 'manga'
+};
+
+export function contentTypeLabel(type) {
+  switch (type) {
+    case CONTENT_TYPES.LIGHT_NOVEL:
+      return 'Light Novel';
+    case CONTENT_TYPES.MANGA:
+      return 'Manga';
+    default:
+      return 'Novel';
+  }
+}
+
 export const BOOK_COLS =
-  'id,owner_id,title,author,theme,auto_theme,ai_reason,hits,words,chapter_count,text_path,cover_path,visibility,description,is_sample,like_count,comment_count,created_at,updated_at,published_at';
+  'id,owner_id,title,author,content_type,theme,auto_theme,ai_reason,hits,words,chapter_count,text_path,cover_path,visibility,description,is_sample,like_count,comment_count,created_at,updated_at,published_at';
 
 export function coverUrl(path) {
   if (!path) return '';
@@ -202,6 +219,11 @@ export function rowToMeta(r) {
     id: r.id,
     title: r.title,
     author: r.author || '',
+
+    contentType:
+      r.content_type ||
+      CONTENT_TYPES.BOOK,
+
     words: r.words || 0,
     chapters: r.chapter_count || 0,
     hits: r.hits || [],
@@ -283,6 +305,7 @@ export const clean = q =>
 export async function publicBooks({
   q = '',
   world = '',
+  contentType = '',
   page = 0,
   size = 24
 } = {}) {
@@ -312,6 +335,13 @@ export async function publicBooks({
   if (world) {
     query = query.or(
       `theme.eq.${world},and(theme.eq.auto,auto_theme.eq.${world})`
+    );
+  }
+
+  if (contentType) {
+    query = query.eq(
+      'content_type',
+      contentType
     );
   }
 
@@ -405,12 +435,6 @@ export async function createBook(
   let coverPath = null;
 
   try {
-    /*
-     * Upload the PDF's rendered first page.
-     *
-     * We intentionally use the book ID in the path so every cover
-     * is unique and easy to clean up when the book is deleted.
-     */
     if (coverBlob) {
       coverPath =
         `${myId()}/${id}.jpg`;
@@ -448,6 +472,9 @@ export async function createBook(
           author: (
             info.author || ''
           ).slice(0, 120),
+          content_type:
+            info.contentType ||
+            CONTENT_TYPES.BOOK,
           auto_theme: info.auto,
           hits: info.hits || [],
           words: info.words,
@@ -468,13 +495,11 @@ export async function createBook(
 
     return rowToMeta(row);
   } catch (e) {
-    // Clean up book text if book creation failed.
     await sb()
       .storage
       .from('book-texts')
       .remove([path]);
 
-    // Clean up cover if it was uploaded.
     if (coverPath) {
       await sb()
         .storage
@@ -487,7 +512,8 @@ export async function createBook(
 }
 
 export async function bookText(meta) {
-  const hit = await Cache.get(meta.id);
+  const hit =
+    await Cache.get(meta.id);
 
   if (
     hit &&
