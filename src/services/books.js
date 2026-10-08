@@ -159,7 +159,8 @@
 // }
 
 
-// Books: metadata in Postgres, gzipped text in Storage.
+// Books: metadata in Postgres, gzipped text or original manga PDF in Storage.
+
 import { Cache } from '../lib/cache.js';
 import { lsGet } from '../lib/utils.js';
 import { must, sb } from './client.js';
@@ -251,7 +252,6 @@ export function rowToMeta(r) {
     ownerId: r.owner_id,
     textPath: r.text_path,
 
-    // PDF cover support
     coverPath: r.cover_path || '',
     coverUrl: coverUrl(r.cover_path),
 
@@ -399,22 +399,52 @@ export async function gunzip(blob, gz) {
 export async function createBook(
   info,
   chapters,
-  coverBlob = null
+  coverBlob = null,
+  sourceBlob = null
 ) {
   const id = crypto.randomUUID();
 
-  const {
-    blob,
-    gz
-  } = await gzip(
-    JSON.stringify({
-      v: 1,
-      chapters
-    })
-  );
+  const isManga =
+    info.contentType === CONTENT_TYPES.MANGA;
 
-  const path =
-    `${myId()}/${id}.json${gz ? '.gz' : ''}`;
+  let path;
+  let uploadBlob;
+  let uploadContentType;
+
+  if (isManga) {
+    if (!sourceBlob) {
+      throw new Error(
+        'The original manga PDF was not available.'
+      );
+    }
+
+    // Manga keeps the original PDF.
+    path =
+      `${myId()}/${id}.pdf`;
+
+    uploadBlob = sourceBlob;
+    uploadContentType = 'application/pdf';
+  } else {
+    const {
+      blob,
+      gz
+    } = await gzip(
+      JSON.stringify({
+        v: 1,
+        chapters
+      })
+    );
+
+    path =
+      `${myId()}/${id}.json${gz ? '.gz' : ''}`;
+
+    uploadBlob = blob;
+
+    uploadContentType =
+      gz
+        ? 'application/gzip'
+        : 'application/json';
+  }
 
   must(
     await sb()
@@ -422,11 +452,10 @@ export async function createBook(
       .from('book-texts')
       .upload(
         path,
-        blob,
+        uploadBlob,
         {
-          contentType: gz
-            ? 'application/gzip'
-            : 'application/json',
+          contentType:
+            uploadContentType,
           upsert: false
         }
       )
@@ -448,7 +477,8 @@ export async function createBook(
           coverPath,
           coverBlob,
           {
-            contentType: 'image/jpeg',
+            contentType:
+              'image/jpeg',
             upsert: false
           }
         );
@@ -465,23 +495,36 @@ export async function createBook(
         .insert({
           id,
           owner_id: myId(),
-          title: info.title.slice(
-            0,
-            200
-          ),
+          title:
+            info.title.slice(
+              0,
+              200
+            ),
           author: (
             info.author || ''
           ).slice(0, 120),
+
           content_type:
             info.contentType ||
             CONTENT_TYPES.BOOK,
-          auto_theme: info.auto,
-          hits: info.hits || [],
-          words: info.words,
+
+          auto_theme:
+            info.auto,
+
+          hits:
+            info.hits || [],
+
+          words:
+            info.words || 0,
+
           chapter_count:
             chapters.length,
-          text_path: path,
-          cover_path: coverPath
+
+          text_path:
+            path,
+
+          cover_path:
+            coverPath
         })
         .select(BOOK_COLS)
         .single()
@@ -494,6 +537,7 @@ export async function createBook(
     });
 
     return rowToMeta(row);
+
   } catch (e) {
     await sb()
       .storage
@@ -504,7 +548,9 @@ export async function createBook(
       await sb()
         .storage
         .from('book-covers')
-        .remove([coverPath]);
+        .remove([
+          coverPath
+        ]);
     }
 
     throw e;
@@ -512,6 +558,31 @@ export async function createBook(
 }
 
 export async function bookText(meta) {
+  /*
+   * Manga does not have extracted text.
+   * The original PDF lives at textPath.
+   *
+   * Return lightweight page placeholders so the
+   * existing reader navigation/progress system
+   * still knows how many pages exist.
+   */
+  if (
+    meta.contentType ===
+    CONTENT_TYPES.MANGA
+  ) {
+    return Array.from(
+      {
+        length:
+          meta.chapters || 0
+      },
+      (_, i) => ({
+        title:
+          `Page ${i + 1}`,
+        paras: []
+      })
+    );
+  }
+
   const hit =
     await Cache.get(meta.id);
 
@@ -526,7 +597,9 @@ export async function bookText(meta) {
     await sb()
       .storage
       .from('book-texts')
-      .download(meta.textPath)
+      .download(
+        meta.textPath
+      )
   );
 
   const chapters =
@@ -620,7 +693,10 @@ export async function setBookCommunities(
       await sb()
         .from('book_communities')
         .delete()
-        .eq('book_id', id)
+        .eq(
+          'book_id',
+          id
+        )
         .in(
           'community_id',
           drop

@@ -143,23 +143,74 @@
 //   }
 // }
 
-// Loading, saving and adding books (samples, your own books, public books).
+// Loading, saving and adding books
+// (samples, your own books, public books).
 
-import { busy, enc, errMsg, fail, signedIn } from './helpers.js';
-import { rememberDestination } from '../auth/session.js';
-import { THEMES } from '../config/themes.js';
-import { SAMPLES, sampleCache, sampleData } from '../content/samples.js';
-import { detectTheme } from '../engine/parser/detect.js';
-import { extractPdf, loadPdfJs, pagesToParas } from '../engine/parser/pdf.js';
-import { chaptersFromParas } from '../engine/parser/structure.js';
-import { textToParas } from '../engine/parser/text.js';
-import { lsSet, toast, words } from '../lib/utils.js';
-import * as cloud from '../services/index.js';
-import { supabase } from '../services/supabase.js';
-import { getUploadContentType } from './upload.js';
+import {
+  busy,
+  enc,
+  errMsg,
+  fail,
+  signedIn
+} from './helpers.js';
+
+import {
+  rememberDestination
+} from '../auth/session.js';
+
+import {
+  THEMES
+} from '../config/themes.js';
+
+import {
+  SAMPLES,
+  sampleCache,
+  sampleData
+} from '../content/samples.js';
+
+import {
+  detectTheme
+} from '../engine/parser/detect.js';
+
+import {
+  extractPdf,
+  loadPdfJs,
+  pagesToParas
+} from '../engine/parser/pdf.js';
+
+import {
+  chaptersFromParas
+} from '../engine/parser/structure.js';
+
+import {
+  textToParas
+} from '../engine/parser/text.js';
+
+import {
+  lsSet,
+  toast,
+  words
+} from '../lib/utils.js';
+
+import * as cloud
+  from '../services/index.js';
+
+import {
+  supabase
+} from '../services/supabase.js';
+
+import {
+  CONTENT_TYPES
+} from '../services/books.js';
+
+import {
+  getUploadContentType
+} from './upload.js';
 
 export function themeOf(book) {
-  return book.theme && book.theme !== 'auto' && THEMES[book.theme]
+  return book.theme &&
+    book.theme !== 'auto' &&
+    THEMES[book.theme]
     ? book.theme
     : THEMES[book.auto]
       ? book.auto
@@ -167,71 +218,118 @@ export function themeOf(book) {
 }
 
 export function sampleMeta(s) {
-  const m = sampleData(s).meta;
+  const m =
+    sampleData(s).meta;
+
   m.visibility = 'public';
   m.ownerId = null;
+
   return m;
 }
 
 export async function getBook(id) {
-  const s = SAMPLES.find(x => x.id === id);
+  const s =
+    SAMPLES.find(
+      x => x.id === id
+    );
 
   if (s) {
-    const d = sampleData(s);
-    const meta = sampleMeta(s);
+    const d =
+      sampleData(s);
+
+    const meta =
+      sampleMeta(s);
 
     if (supabase) {
       try {
-        const m = await cloud.bookMeta(id);
+        const m =
+          await cloud.bookMeta(id);
+
         if (m) {
-          meta.likeCount = m.likeCount;
-          meta.commentCount = m.commentCount;
+          meta.likeCount =
+            m.likeCount;
+
+          meta.commentCount =
+            m.commentCount;
         }
       } catch (e) {}
 
     }
 
-    return { meta, chapters: d.chapters };
+    return {
+      meta,
+      chapters:
+        d.chapters
+    };
   }
 
-  if (!supabase) return null;
+  if (!supabase) {
+    return null;
+  }
 
-  const meta = await cloud.bookMeta(id).catch(() => null);
-  if (!meta) return null;
+  const meta =
+    await cloud
+      .bookMeta(id)
+      .catch(() => null);
 
-  const chapters = await cloud.bookText(meta);
+  if (!meta) {
+    return null;
+  }
 
-  return { meta, chapters };
+  const chapters =
+    await cloud.bookText(meta);
+
+  return {
+    meta,
+    chapters
+  };
 }
 
 export async function saveMeta(meta) {
   if (meta.sample) {
     lsSet(
-      'iw:sampletheme:' + meta.id,
-      meta.theme === 'auto' ? null : meta.theme
+      'iw:sampletheme:' +
+        meta.id,
+      meta.theme === 'auto'
+        ? null
+        : meta.theme
     );
 
-    const d = sampleCache.get(meta.id);
+    const d =
+      sampleCache.get(
+        meta.id
+      );
 
-    if (d) d.meta.theme = meta.theme;
+    if (d) {
+      d.meta.theme =
+        meta.theme;
+    }
 
     return;
   }
 
   if (meta.remote) {
     lsSet(
-      'iw:remotetheme:' + meta.id,
-      meta.theme === 'auto' ? null : meta.theme
+      'iw:remotetheme:' +
+        meta.id,
+      meta.theme === 'auto'
+        ? null
+        : meta.theme
     );
 
     return;
   }
 
   try {
-    await cloud.updateBook(meta.id, {
-      theme: meta.theme,
-      ai_reason: meta.aiReason || ''
-    });
+    await cloud.updateBook(
+      meta.id,
+      {
+        theme:
+          meta.theme,
+        ai_reason:
+          meta.aiReason || ''
+      }
+    );
   } catch (e) {
     fail(e);
   }
@@ -239,30 +337,168 @@ export async function saveMeta(meta) {
 
 export function titleFromFile(name) {
   return name
-    .replace(/\.[^.]+$/, '')
-    .replace(/[\_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(
+      /\.[^.]+$/,
+      ''
+    )
+    .replace(
+      /[_-]+/g,
+      ' '
+    )
+    .replace(
+      /\s+/g,
+      ' '
+    )
     .trim()
-    .replace(/^./, c => c.toUpperCase());
+    .replace(
+      /^./,
+      c => c.toUpperCase()
+    );
+}
+
+/*
+ * Render the first PDF page into a small JPEG.
+ *
+ * This is used only for Manga because Manga bypasses
+ * the normal text/cover extraction pipeline.
+ */
+async function mangaCover(
+  pdf
+) {
+  const page =
+    await pdf.getPage(1);
+
+  const base =
+    page.getViewport({
+      scale: 1
+    });
+
+  const maxDimension =
+    1800;
+
+  const scale =
+    Math.min(
+      maxDimension /
+        base.width,
+      maxDimension /
+        base.height
+    );
+
+  const viewport =
+    page.getViewport({
+      scale
+    });
+
+  const canvas =
+    document.createElement(
+      'canvas'
+    );
+
+  const dpr =
+    Math.min(
+      window.devicePixelRatio ||
+        1,
+      2
+    );
+
+  canvas.width =
+    Math.ceil(
+      viewport.width * dpr
+    );
+
+  canvas.height =
+    Math.ceil(
+      viewport.height * dpr
+    );
+
+  const ctx =
+    canvas.getContext(
+      '2d'
+    );
+
+  await page
+    .render({
+      canvasContext: ctx,
+      viewport,
+      transform:
+        dpr !== 1
+          ? [
+              dpr,
+              0,
+              0,
+              dpr,
+              0,
+              0
+            ]
+          : null
+    })
+    .promise;
+
+  page.cleanup();
+
+  return new Promise(
+    resolve => {
+      canvas.toBlob(
+        blob =>
+          resolve(blob),
+        'image/jpeg',
+        0.92
+      );
+    }
+  );
 }
 
 export async function addFile(file) {
-  if (!file) return;
+  if (!file) {
+    return;
+  }
 
   if (!signedIn()) {
-    rememberDestination('#/library');
-    toast('Sign in to add books to your library.');
-    location.hash = '#/signin';
+    rememberDestination(
+      '#/library'
+    );
+
+    toast(
+      'Sign in to add books to your library.'
+    );
+
+    location.hash =
+      '#/signin';
+
     return;
   }
 
   const isPdf =
-    /\.pdf$/i.test(file.name) ||
-    file.type === 'application/pdf';
+    /\.pdf$/i.test(
+      file.name
+    ) ||
+    file.type ===
+      'application/pdf';
 
   const isTxt =
-    /\.txt$/i.test(file.name) ||
-    file.type === 'text/plain';
+    /\.txt$/i.test(
+      file.name
+    ) ||
+    file.type ===
+      'text/plain';
+
+  const contentType =
+    getUploadContentType();
+
+  /*
+   * Manga is intentionally PDF-only.
+   * A .txt file has no page artwork to preserve.
+   */
+  if (
+    contentType ===
+      CONTENT_TYPES.MANGA &&
+    !isPdf
+  ) {
+    toast(
+      'Manga must be uploaded as a PDF so the original pages can be preserved.'
+    );
+    return;
+  }
 
   if (!isPdf && !isTxt) {
     toast(
@@ -271,18 +507,201 @@ export async function addFile(file) {
     return;
   }
 
-  const contentType = getUploadContentType();
-
-  busy(true, `Opening “${file.name}”…`, 0);
+  busy(
+    true,
+    `Opening “${file.name}”…`,
+    0
+  );
 
   try {
-    const buf = await file.arrayBuffer();
+    const buf =
+      await file.arrayBuffer();
 
     let paras;
     let title = '';
     let author = '';
     let cover = null;
+    let chapters = [];
 
+    /*
+     * =====================================================
+     * MANGA
+     * =====================================================
+     *
+     * Do NOT call extractPdf().
+     *
+     * We only open the PDF enough to:
+     * - read metadata
+     * - know the page count
+     * - make a cover preview
+     *
+     * The original PDF itself is then stored.
+     */
+    if (
+      contentType ===
+      CONTENT_TYPES.MANGA
+    ) {
+      try {
+        await loadPdfJs();
+      } catch (e) {
+        throw new Error(
+          "The PDF reader couldn't load. Check your internet connection and try again."
+        );
+      }
+
+      let pdf;
+
+      try {
+        pdf =
+          await window.pdfjsLib
+            .getDocument({
+              data:
+                new Uint8Array(
+                  buf
+                ),
+              isEvalSupported:
+                false
+            })
+            .promise;
+      } catch (e) {
+        if (
+          e &&
+          e.name ===
+            'PasswordException'
+        ) {
+          throw new Error(
+            'This PDF is password-protected. Remove the password and add it again.'
+          );
+        }
+
+        throw new Error(
+          "This file couldn't be read as a PDF. It may be damaged."
+        );
+      }
+
+      let info = {};
+
+      try {
+        info =
+          (
+            await pdf.getMetadata()
+          ).info || {};
+      } catch (e) {}
+
+      const mt =
+        (
+          info.Title || ''
+        ).trim();
+
+      title =
+        mt.length > 2 &&
+        !/^untitled|\.pdf$|^microsoft|^document/i.test(
+          mt
+        )
+          ? mt
+          : '';
+
+      author =
+        (
+          info.Author || ''
+        ).trim();
+
+      const pageCount =
+        pdf.numPages;
+
+      /*
+       * Lightweight page records.
+       * No OCR, no text extraction, no paragraph conversion.
+       */
+      chapters =
+        Array.from(
+          {
+            length:
+              pageCount
+          },
+          (_, i) => ({
+            title:
+              `Page ${i + 1}`,
+            paras: []
+          })
+        );
+
+      busy(
+        true,
+        `Preparing ${pageCount} manga pages…`,
+        0.5
+      );
+
+      cover =
+        await mangaCover(
+          pdf
+        );
+
+      pdf.destroy();
+
+      const sourceBlob =
+        new Blob(
+          [buf],
+          {
+            type:
+              'application/pdf'
+          }
+        );
+
+      busy(
+        true,
+        'Saving the original manga PDF…',
+        1
+      );
+
+      const meta =
+        await cloud.createBook(
+          {
+            title:
+              title ||
+              titleFromFile(
+                file.name
+              ),
+
+            author,
+
+            contentType,
+
+            /*
+             * Manga has no extracted text,
+             * so don't invent a world from OCR.
+             */
+            auto:
+              'parchment',
+
+            hits: [],
+
+            words: 0
+          },
+
+          chapters,
+
+          cover,
+
+          sourceBlob
+        );
+
+      busy(false);
+
+      location.hash =
+        '#/book/' +
+        enc(meta.id);
+
+      return;
+    }
+
+    /*
+     * =====================================================
+     * NORMAL NOVEL / LIGHT NOVEL
+     * =====================================================
+     *
+     * This is the existing pipeline.
+     */
     if (isPdf) {
       try {
         await loadPdfJs();
@@ -295,19 +714,21 @@ export async function addFile(file) {
       let r;
 
       try {
-        r = await extractPdf(
-          new Uint8Array(buf),
-          (f, i, n) =>
-            busy(
-              true,
-              `Reading page ${i} of ${n}`,
-              f
-            )
-        );
+        r =
+          await extractPdf(
+            new Uint8Array(buf),
+            (f, i, n) =>
+              busy(
+                true,
+                `Reading page ${i} of ${n}`,
+                f
+              )
+          );
       } catch (e) {
         if (
           e &&
-          e.name === 'PasswordException'
+          e.name ===
+            'PasswordException'
         ) {
           throw new Error(
             'This PDF is password-protected. Remove the password and add it again.'
@@ -319,45 +740,80 @@ export async function addFile(file) {
         );
       }
 
-      paras = pagesToParas(r.pages);
+      paras =
+        pagesToParas(
+          r.pages
+        );
 
-      const mt = (r.title || '').trim();
+      const mt =
+        (
+          r.title || ''
+        ).trim();
 
       title =
         mt.length > 2 &&
-        !/^untitled|\.pdf$|^microsoft|^document/i.test(mt)
+        !/^untitled|\.pdf$|^microsoft|^document/i.test(
+          mt
+        )
           ? mt
           : '';
 
-      author = (r.author || '').trim();
+      author =
+        (
+          r.author || ''
+        ).trim();
 
-      cover = r.cover || null;
+      cover =
+        r.cover || null;
+
     } else {
-      const text = new TextDecoder().decode(buf);
+      const text =
+        new TextDecoder()
+          .decode(buf);
 
-      paras = textToParas(text);
+      paras =
+        textToParas(text);
 
-      const head = text.slice(0, 6000);
+      const head =
+        text.slice(
+          0,
+          6000
+        );
 
-      const mt = head.match(
-        /^Title:\s*(.+)$/m
-      );
+      const mt =
+        head.match(
+          /^Title:\s*(.+)$/m
+        );
 
-      const ma = head.match(
-        /^Author:\s*(.+)$/m
-      );
+      const ma =
+        head.match(
+          /^Author:\s*(.+)$/m
+        );
 
-      if (mt) title = mt[1].trim();
-      if (ma) author = ma[1].trim();
+      if (mt) {
+        title =
+          mt[1].trim();
+      }
+
+      if (ma) {
+        author =
+          ma[1].trim();
+      }
     }
 
-    const chapters = chaptersFromParas(paras);
+    chapters =
+      chaptersFromParas(
+        paras
+      );
 
-    const total = words(
-      chapters
-        .flatMap(c => c.paras)
-        .join(' ')
-    );
+    const total =
+      words(
+        chapters
+          .flatMap(
+            c => c.paras
+          )
+          .join(' ')
+      );
 
     if (total < 60) {
       throw new Error(
@@ -371,32 +827,44 @@ export async function addFile(file) {
       1
     );
 
-    const det = detectTheme(chapters);
+    const det =
+      detectTheme(
+        chapters
+      );
 
-    const meta = await cloud.createBook(
-      {
-        title:
-          title ||
-          titleFromFile(file.name),
+    const meta =
+      await cloud.createBook(
+        {
+          title:
+            title ||
+            titleFromFile(
+              file.name
+            ),
 
-        author,
+          author,
 
-        contentType,
+          contentType,
 
-        auto: det.theme,
+          auto:
+            det.theme,
 
-        hits: det.hits,
+          hits:
+            det.hits,
 
-        words: total
-      },
-      chapters,
-      cover
-    );
+          words:
+            total
+        },
+
+        chapters,
+
+        cover
+      );
 
     busy(false);
 
     location.hash =
-      '#/book/' + enc(meta.id);
+      '#/book/' +
+      enc(meta.id);
 
   } catch (e) {
     busy(false);
