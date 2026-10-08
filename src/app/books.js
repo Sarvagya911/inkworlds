@@ -207,6 +207,7 @@ import {
   getUploadContentType
 } from './upload.js';
 
+
 export function themeOf(book) {
   return book.theme &&
     book.theme !== 'auto' &&
@@ -217,6 +218,7 @@ export function themeOf(book) {
       : 'parchment';
 }
 
+
 export function sampleMeta(s) {
   const m =
     sampleData(s).meta;
@@ -226,6 +228,7 @@ export function sampleMeta(s) {
 
   return m;
 }
+
 
 export async function getBook(id) {
   const s =
@@ -253,7 +256,6 @@ export async function getBook(id) {
             m.commentCount;
         }
       } catch (e) {}
-
     }
 
     return {
@@ -284,6 +286,7 @@ export async function getBook(id) {
     chapters
   };
 }
+
 
 export async function saveMeta(meta) {
   if (meta.sample) {
@@ -335,6 +338,7 @@ export async function saveMeta(meta) {
   }
 }
 
+
 export function titleFromFile(name) {
   return name
     .replace(
@@ -356,15 +360,14 @@ export function titleFromFile(name) {
     );
 }
 
+
 /*
  * Render the first PDF page into a small JPEG.
  *
  * This is used only for Manga because Manga bypasses
  * the normal text/cover extraction pipeline.
  */
-async function mangaCover(
-  pdf
-) {
+async function mangaCover(pdf) {
   const page =
     await pdf.getPage(1);
 
@@ -416,6 +419,12 @@ async function mangaCover(
       '2d'
     );
 
+  if (!ctx) {
+    throw new Error(
+      'Could not create a canvas for the Manga cover.'
+    );
+  }
+
   await page
     .render({
       canvasContext: ctx,
@@ -437,16 +446,27 @@ async function mangaCover(
   page.cleanup();
 
   return new Promise(
-    resolve => {
+    (resolve, reject) => {
       canvas.toBlob(
-        blob =>
-          resolve(blob),
+        blob => {
+          if (!blob) {
+            reject(
+              new Error(
+                'Could not create the Manga cover image.'
+              )
+            );
+            return;
+          }
+
+          resolve(blob);
+        },
         'image/jpeg',
         0.92
       );
     }
   );
 }
+
 
 export async function addFile(file) {
   if (!file) {
@@ -485,9 +505,11 @@ export async function addFile(file) {
   const contentType =
     getUploadContentType();
 
+
   /*
    * Manga is intentionally PDF-only.
-   * A .txt file has no page artwork to preserve.
+   *
+   * A text file cannot preserve Manga artwork/pages.
    */
   if (
     contentType ===
@@ -497,15 +519,19 @@ export async function addFile(file) {
     toast(
       'Manga must be uploaded as a PDF so the original pages can be preserved.'
     );
+
     return;
   }
+
 
   if (!isPdf && !isTxt) {
     toast(
       'Inkworlds reads PDF and plain text files. Try a .pdf or .txt book.'
     );
+
     return;
   }
+
 
   busy(
     true,
@@ -513,15 +539,30 @@ export async function addFile(file) {
     0
   );
 
+
   try {
+    /*
+     * Keep the original uploaded File object.
+     *
+     * IMPORTANT:
+     * PDF.js can detach/transfer the ArrayBuffer passed
+     * to getDocument(). Therefore the original File must
+     * be used when saving Manga instead of reconstructing
+     * a Blob from the PDF.js buffer.
+     */
     const buf =
       await file.arrayBuffer();
 
     let paras;
+
     let title = '';
+
     let author = '';
+
     let cover = null;
+
     let chapters = [];
+
 
     /*
      * =====================================================
@@ -531,11 +572,12 @@ export async function addFile(file) {
      * Do NOT call extractPdf().
      *
      * We only open the PDF enough to:
+     *
      * - read metadata
      * - know the page count
      * - make a cover preview
      *
-     * The original PDF itself is then stored.
+     * The original uploaded PDF File is stored unchanged.
      */
     if (
       contentType ===
@@ -549,7 +591,9 @@ export async function addFile(file) {
         );
       }
 
+
       let pdf;
+
 
       try {
         pdf =
@@ -563,6 +607,7 @@ export async function addFile(file) {
                 false
             })
             .promise;
+
       } catch (e) {
         if (
           e &&
@@ -579,7 +624,9 @@ export async function addFile(file) {
         );
       }
 
+
       let info = {};
+
 
       try {
         info =
@@ -588,10 +635,12 @@ export async function addFile(file) {
           ).info || {};
       } catch (e) {}
 
+
       const mt =
         (
           info.Title || ''
         ).trim();
+
 
       title =
         mt.length > 2 &&
@@ -601,17 +650,26 @@ export async function addFile(file) {
           ? mt
           : '';
 
+
       author =
         (
           info.Author || ''
         ).trim();
 
+
       const pageCount =
         pdf.numPages;
 
+
       /*
-       * Lightweight page records.
-       * No OCR, no text extraction, no paragraph conversion.
+       * Create lightweight page records.
+       *
+       * There is deliberately:
+       *
+       * - no extractPdf()
+       * - no getTextContent()
+       * - no OCR
+       * - no paragraph conversion
        */
       chapters =
         Array.from(
@@ -626,33 +684,57 @@ export async function addFile(file) {
           })
         );
 
+
       busy(
         true,
         `Preparing ${pageCount} manga pages…`,
         0.5
       );
 
+
       cover =
         await mangaCover(
           pdf
         );
 
-      pdf.destroy();
 
+      /*
+       * We no longer need this PDF.js document.
+       *
+       * IMPORTANT:
+       * We do NOT use its ArrayBuffer to save the file.
+       */
+      await pdf.destroy();
+
+
+      /*
+       * IMPORTANT FIX:
+       *
+       * Use the ORIGINAL uploaded File directly.
+       *
+       * Do NOT do:
+       *
+       * new Blob([buf], ...)
+       *
+       * because PDF.js may have detached the ArrayBuffer.
+       */
       const sourceBlob =
-        new Blob(
-          [buf],
-          {
-            type:
-              'application/pdf'
-          }
+        file;
+
+
+      if (!sourceBlob.size) {
+        throw new Error(
+          'The original Manga PDF is empty.'
         );
+      }
+
 
       busy(
         true,
         'Saving the original manga PDF…',
         1
       );
+
 
       const meta =
         await cloud.createBook(
@@ -669,7 +751,7 @@ export async function addFile(file) {
 
             /*
              * Manga has no extracted text,
-             * so don't invent a world from OCR.
+             * so don't detect a world from OCR/text.
              */
             auto:
               'parchment',
@@ -686,21 +768,25 @@ export async function addFile(file) {
           sourceBlob
         );
 
+
       busy(false);
+
 
       location.hash =
         '#/book/' +
         enc(meta.id);
 
+
       return;
     }
+
 
     /*
      * =====================================================
      * NORMAL NOVEL / LIGHT NOVEL
      * =====================================================
      *
-     * This is the existing pipeline.
+     * Existing text extraction pipeline remains unchanged.
      */
     if (isPdf) {
       try {
@@ -711,7 +797,9 @@ export async function addFile(file) {
         );
       }
 
+
       let r;
+
 
       try {
         r =
@@ -724,6 +812,7 @@ export async function addFile(file) {
                 f
               )
           );
+
       } catch (e) {
         if (
           e &&
@@ -740,15 +829,18 @@ export async function addFile(file) {
         );
       }
 
+
       paras =
         pagesToParas(
           r.pages
         );
 
+
       const mt =
         (
           r.title || ''
         ).trim();
+
 
       title =
         mt.length > 2 &&
@@ -758,10 +850,12 @@ export async function addFile(file) {
           ? mt
           : '';
 
+
       author =
         (
           r.author || ''
         ).trim();
+
 
       cover =
         r.cover || null;
@@ -771,8 +865,10 @@ export async function addFile(file) {
         new TextDecoder()
           .decode(buf);
 
+
       paras =
         textToParas(text);
+
 
       const head =
         text.slice(
@@ -780,20 +876,24 @@ export async function addFile(file) {
           6000
         );
 
+
       const mt =
         head.match(
           /^Title:\s*(.+)$/m
         );
+
 
       const ma =
         head.match(
           /^Author:\s*(.+)$/m
         );
 
+
       if (mt) {
         title =
           mt[1].trim();
       }
+
 
       if (ma) {
         author =
@@ -801,10 +901,12 @@ export async function addFile(file) {
       }
     }
 
+
     chapters =
       chaptersFromParas(
         paras
       );
+
 
     const total =
       words(
@@ -815,11 +917,13 @@ export async function addFile(file) {
           .join(' ')
       );
 
+
     if (total < 60) {
       throw new Error(
         "This PDF has no selectable text, so it's probably a scanned book. Try a PDF with a text layer, or a .txt version."
       );
     }
+
 
     busy(
       true,
@@ -827,10 +931,12 @@ export async function addFile(file) {
       1
     );
 
+
     const det =
       detectTheme(
         chapters
       );
+
 
     const meta =
       await cloud.createBook(
@@ -860,7 +966,9 @@ export async function addFile(file) {
         cover
       );
 
+
     busy(false);
+
 
     location.hash =
       '#/book/' +
