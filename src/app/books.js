@@ -144,6 +144,7 @@
 // }
 
 // Loading, saving and adding books (samples, your own books, public books).
+
 import { busy, enc, errMsg, fail, signedIn } from './helpers.js';
 import { rememberDestination } from '../auth/session.js';
 import { THEMES } from '../config/themes.js';
@@ -155,6 +156,7 @@ import { textToParas } from '../engine/parser/text.js';
 import { lsSet, toast, words } from '../lib/utils.js';
 import * as cloud from '../services/index.js';
 import { supabase } from '../services/supabase.js';
+import { getUploadContentType } from './upload.js';
 
 export function themeOf(book) {
   return book.theme && book.theme !== 'auto' && THEMES[book.theme]
@@ -181,32 +183,25 @@ export async function getBook(id) {
     if (supabase) {
       try {
         const m = await cloud.bookMeta(id);
-
         if (m) {
           meta.likeCount = m.likeCount;
           meta.commentCount = m.commentCount;
         }
       } catch (e) {}
+
     }
 
-    return {
-      meta,
-      chapters: d.chapters
-    };
+    return { meta, chapters: d.chapters };
   }
 
   if (!supabase) return null;
 
   const meta = await cloud.bookMeta(id).catch(() => null);
-
   if (!meta) return null;
 
   const chapters = await cloud.bookText(meta);
 
-  return {
-    meta,
-    chapters
-  };
+  return { meta, chapters };
 }
 
 export async function saveMeta(meta) {
@@ -245,7 +240,7 @@ export async function saveMeta(meta) {
 export function titleFromFile(name) {
   return name
     .replace(/\.[^.]+$/, '')
-    .replace(/[_-]+/g, ' ')
+    .replace(/[\_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^./, c => c.toUpperCase());
@@ -275,6 +270,8 @@ export async function addFile(file) {
     );
     return;
   }
+
+  const contentType = getUploadContentType();
 
   busy(true, `Opening “${file.name}”…`, 0);
 
@@ -308,7 +305,10 @@ export async function addFile(file) {
             )
         );
       } catch (e) {
-        if (e && e.name === 'PasswordException') {
+        if (
+          e &&
+          e.name === 'PasswordException'
+        ) {
           throw new Error(
             'This PDF is password-protected. Remove the password and add it again.'
           );
@@ -331,9 +331,6 @@ export async function addFile(file) {
 
       author = (r.author || '').trim();
 
-      // This is the important new part.
-      // If the PDF's first page looks like a real cover,
-      // extractPdf() gives us a JPEG Blob here.
       cover = r.cover || null;
     } else {
       const text = new TextDecoder().decode(buf);
@@ -341,8 +338,14 @@ export async function addFile(file) {
       paras = textToParas(text);
 
       const head = text.slice(0, 6000);
-      const mt = head.match(/^Title:\s*(.+)$/m);
-      const ma = head.match(/^Author:\s*(.+)$/m);
+
+      const mt = head.match(
+        /^Title:\s*(.+)$/m
+      );
+
+      const ma = head.match(
+        /^Author:\s*(.+)$/m
+      );
 
       if (mt) title = mt[1].trim();
       if (ma) author = ma[1].trim();
@@ -351,7 +354,9 @@ export async function addFile(file) {
     const chapters = chaptersFromParas(paras);
 
     const total = words(
-      chapters.flatMap(c => c.paras).join(' ')
+      chapters
+        .flatMap(c => c.paras)
+        .join(' ')
     );
 
     if (total < 60) {
@@ -360,17 +365,28 @@ export async function addFile(file) {
       );
     }
 
-    busy(true, 'Saving to your library…', 1);
+    busy(
+      true,
+      'Saving to your library…',
+      1
+    );
 
     const det = detectTheme(chapters);
 
     const meta = await cloud.createBook(
       {
         title:
-          title || titleFromFile(file.name),
+          title ||
+          titleFromFile(file.name),
+
         author,
+
+        contentType,
+
         auto: det.theme,
+
         hits: det.hits,
+
         words: total
       },
       chapters,
@@ -381,6 +397,7 @@ export async function addFile(file) {
 
     location.hash =
       '#/book/' + enc(meta.id);
+
   } catch (e) {
     busy(false);
 

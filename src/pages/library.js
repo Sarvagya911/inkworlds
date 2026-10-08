@@ -77,6 +77,7 @@
 
 
 // Your library shelf.
+
 import {
   sampleMeta,
   themeOf
@@ -93,6 +94,10 @@ import {
 import { routeId } from '../app/router.js';
 import { progOf } from '../app/sync.js';
 import { rememberDestination } from '../auth/session.js';
+
+import {
+  setUploadContentType
+} from '../app/upload.js';
 
 import {
   CONTENT_TYPES,
@@ -140,28 +145,17 @@ function typeOf(book) {
   );
 }
 
-/*
- * Render one book spine.
- *
- * showCategory:
- *   true  -> show Novel / Light Novel / Manga underneath
- *   false -> clean spine only
- *
- * The category is NEVER placed on the spine itself.
- */
 export function spineHTML(
   book,
   showCategory = false
 ) {
-  const th =
-    THEMES[themeOf(book)];
+  const th = THEMES[themeOf(book)];
 
-  const hash =
-    [...book.id].reduce(
-      (a, ch) =>
-        a + ch.charCodeAt(0),
-      0
-    );
+  const hash = [...book.id].reduce(
+    (a, ch) =>
+      a + ch.charCodeAt(0),
+    0
+  );
 
   const pct = Math.round(
     ((progOf(book.id) || {}).pct || 0) *
@@ -179,10 +173,7 @@ export function spineHTML(
     --s2:${th.spine[1]};
     --s3:${th.spine[2]};
     --sf:${esc(
-      fontStack(
-        th.title,
-        'title'
-      )
+      fontStack(th.title, 'title')
     )};
   `;
 
@@ -190,28 +181,19 @@ export function spineHTML(
     book.visibility === 'public' &&
     !book.sample;
 
-  /*
-   * The actual spine.
-   * Notice that there is NO content-type text here.
-   */
   const spine = `
     <a
       class="spine"
       href="#/book/${enc(book.id)}"
       style="${style}"
-      aria-label="${esc(
-        book.title
-      )}${
-        pub
-          ? ', public'
-          : ''
+      aria-label="${esc(book.title)}${
+        pub ? ', public' : ''
       }${
         pct
           ? `, ${pct}% read`
           : ''
       }"
     >
-
       ${
         pub
           ? '<span class="pub" title="Public"></span>'
@@ -227,14 +209,9 @@ export function spineHTML(
           ? `<span class="pct">${pct}%</span>`
           : ''
       }
-
     </a>
   `;
 
-  /*
-   * Only show the category when the
-   * "All" tab is selected.
-   */
   if (!showCategory) {
     return spine;
   }
@@ -267,7 +244,9 @@ export async function viewLibrary() {
       </h1>
 
       <p class="lede">
-        Your books, saved to your account. Add a PDF or a plain-text book, or drop a file anywhere on this page.
+        Your books, saved to your account.
+        Add a PDF or a plain-text book,
+        or drop a file anywhere on this page.
       </p>
 
       <div class="actions">
@@ -284,7 +263,10 @@ export async function viewLibrary() {
           class="muted"
           style="font-size:.95rem"
         >
-          Free classics like <em>Dracula</em> are on Project Gutenberg as .txt and PDF.
+          Free classics like
+          <em>Dracula</em>
+          are on Project Gutenberg as
+          .txt and PDF.
         </span>
 
       </div>
@@ -300,22 +282,22 @@ export async function viewLibrary() {
           role="tablist"
           aria-label="Library content type"
         >
-          ${TYPE_TABS.map(
-            tab => `
-              <button
-                type="button"
-                role="tab"
-                data-lib-type="${esc(
-                  tab.id
-                )}"
-                aria-selected="${
-                  tab.id === ''
-                }"
-              >
-                ${esc(tab.label)}
-              </button>
-            `
-          ).join('')}
+          ${TYPE_TABS
+            .map(
+              tab => `
+                <button
+                  type="button"
+                  role="tab"
+                  data-lib-type="${esc(tab.id)}"
+                  aria-selected="${
+                    tab.id === ''
+                  }"
+                >
+                  ${esc(tab.label)}
+                </button>
+              `
+            )
+            .join('')}
         </div>
 
         <div id="mine">
@@ -333,21 +315,19 @@ export async function viewLibrary() {
         </h2>
 
         <p class="sub">
-          Two short original stories that show how the reader changes with each book.
+          Two short original stories that show
+          how the reader changes with each book.
         </p>
 
         <div class="shelf">
-          ${SAMPLES.map(
-            s =>
-              /*
-               * Samples should demonstrate the same
-               * category indicator as real books.
-               */
+          ${SAMPLES
+            .map(s =>
               spineHTML(
                 sampleMeta(s),
                 true
               )
-          ).join('')}
+            )
+            .join('')}
         </div>
 
       </div>
@@ -369,6 +349,33 @@ export async function viewLibrary() {
         return;
       }
 
+      const choice = window.prompt(
+        'What are you adding?\n\n' +
+        '1 = Novel\n' +
+        '2 = Light Novel\n' +
+        '3 = Manga'
+      );
+
+      if (choice === null) {
+        return;
+      }
+
+      const value =
+        choice.trim();
+
+      let type =
+        CONTENT_TYPES.BOOK;
+
+      if (value === '2') {
+        type =
+          CONTENT_TYPES.LIGHT_NOVEL;
+      } else if (value === '3') {
+        type =
+          CONTENT_TYPES.MANGA;
+      }
+
+      setUploadContentType(type);
+
       $('fileIn').click();
     }
   );
@@ -389,10 +396,11 @@ export async function viewLibrary() {
       await cloud.myBooks();
   } catch (e) {
     if (rid === routeId) {
-      $('mine').innerHTML =
-        `<div class="empty-box">${esc(
-          errMsg(e)
-        )}</div>`;
+      $('mine').innerHTML = `
+        <div class="empty-box">
+          ${esc(errMsg(e))}
+        </div>
+      `;
     }
 
     return;
@@ -438,7 +446,8 @@ export async function viewLibrary() {
     </div>
 
     <p class="sub">
-      Pick a title to see its world and chapters. A dot on the spine means it's public.
+      Pick a title to see its world and chapters.
+      A dot on the spine means it's public.
     </p>
 
     <div
@@ -457,8 +466,8 @@ export async function viewLibrary() {
     const sort =
       $('libSort').value;
 
-    const p = b =>
-      progOf(b.id) || {};
+    const p =
+      b => progOf(b.id) || {};
 
     const list =
       mine.filter(book => {
@@ -483,23 +492,24 @@ export async function viewLibrary() {
         );
       });
 
-    list.sort((a, b) =>
-      sort === 'title'
-        ? a.title.localeCompare(
-            b.title
-          )
-        : sort === 'progress'
-          ? (p(b).pct || 0) -
-            (p(a).pct || 0)
-          : sort === 'read'
-            ? (p(b).updated || 0) -
-              (p(a).updated || 0)
-            : b.added - a.added
+    list.sort(
+      (a, b) =>
+        sort === 'title'
+          ? a.title.localeCompare(
+              b.title
+            )
+
+          : sort === 'progress'
+            ? (p(b).pct || 0) -
+              (p(a).pct || 0)
+
+            : sort === 'read'
+              ? (p(b).updated || 0) -
+                (p(a).updated || 0)
+
+              : b.added - a.added
     );
 
-    /*
-     * Only the All tab gets category labels.
-     */
     const showCategory =
       contentType === '';
 
@@ -513,6 +523,7 @@ export async function viewLibrary() {
               )
             )
             .join('')
+
         : `
           <p class="empty">
             ${
@@ -554,15 +565,17 @@ export async function viewLibrary() {
       );
     });
 
-  $('libSearch').addEventListener(
-    'input',
-    draw
-  );
+  $('libSearch')
+    .addEventListener(
+      'input',
+      draw
+    );
 
-  $('libSort').addEventListener(
-    'change',
-    draw
-  );
+  $('libSort')
+    .addEventListener(
+      'change',
+      draw
+    );
 
   draw();
 }
