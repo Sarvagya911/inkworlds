@@ -450,6 +450,8 @@
   color: var(--text);
 }
 
+/* ---------- Animations ---------- */
+
 @keyframes uploadOverlayIn {
   from {
     opacity: 0;
@@ -474,18 +476,25 @@
   }
 }
 
+/* ---------- Mobile ---------- */
+
 @media (max-width: 600px) {
   .shelf {
     align-items: flex-end;
+
+    /*
+     * Keep all wrapped rows packed against
+     * the bottom of the shelf instead of
+     * distributing them through the available
+     * shelf height.
+     */
+    align-content: flex-end;
+
     row-gap: 0.35rem;
   }
 
   .spine-item {
-    /*
-     * The label stays visually beneath the book,
-     * but it no longer determines the book's
-     * vertical alignment inside a wrapped row.
-     */
+    position: relative;
     display: block;
   }
 
