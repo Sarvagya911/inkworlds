@@ -536,6 +536,28 @@ export function closeReader() {
   $('pages').innerHTML = '';
 }
 
+/*
+ * Apply reader preferences.
+ *
+ * Page opacity:
+ *
+ * Desktop
+ *   100% default
+ *
+ * Mobile / tablet
+ *   50% default
+ *
+ * Visual mapping:
+ *   100% -> fully opaque
+ *    75% -> lightly translucent
+ *    50% -> immersive translucent
+ *    25% -> very translucent
+ *     0% -> floating text / no page surface
+ *
+ * The mapping is intentionally nonlinear.
+ * This gives the 50% setting the immersive look
+ * we want without making the text unreadable.
+ */
 export function applyReaderPrefs() {
   const r = $('reader');
 
@@ -549,20 +571,29 @@ export function applyReaderPrefs() {
     !!prefs.handAll
   );
 
-  // Builds before the opacity control worked
-  // stored 72 as a default. Treat that legacy
-  // value as unset unless the user explicitly
-  // changed it.
+  /*
+   * Older builds used 72 as the opacity default
+   * before the opacity control was properly wired.
+   *
+   * If the user has never explicitly changed opacity,
+   * treat that old 72 value as unset.
+   */
   const legacyUnset =
     prefs.pageOpacitySet !== true &&
-    prefs.pageOpacity === 72;
+    Number(prefs.pageOpacity) === 72;
 
   const explicitOpacity =
     !legacyUnset &&
-    Number.isFinite(prefs.pageOpacity)
-      ? prefs.pageOpacity
+    Number.isFinite(Number(prefs.pageOpacity))
+      ? Number(prefs.pageOpacity)
       : null;
 
+  /*
+   * Responsive default:
+   *
+   * <= 1024px = phone/tablet
+   * > 1024px  = desktop
+   */
   const defaultOpacity =
     window.matchMedia(
       '(max-width: 1024px)'
@@ -573,18 +604,90 @@ export function applyReaderPrefs() {
   const opacity =
     explicitOpacity == null
       ? defaultOpacity
-      : explicitOpacity;
+      : Math.max(
+          0,
+          Math.min(100, explicitOpacity)
+        );
+
+  /*
+   * Nonlinear visual mapping.
+   *
+   * The slider percentage is NOT directly used as
+   * the visual background opacity.
+   *
+   * This lets:
+   *
+   * 50% = properly immersive
+   * 25% = strongly translucent
+   *
+   * while still keeping enough visual structure
+   * around the text.
+   */
+  let opacityFactor;
+
+  if (opacity <= 0) {
+    opacityFactor = 0;
+  } else if (opacity <= 25) {
+    opacityFactor =
+      (opacity / 25) * 0.22;
+  } else if (opacity <= 50) {
+    opacityFactor =
+      0.22 +
+      ((opacity - 25) / 25) * 0.38;
+  } else if (opacity <= 75) {
+    opacityFactor =
+      0.60 +
+      ((opacity - 50) / 25) * 0.25;
+  } else {
+    opacityFactor =
+      0.85 +
+      ((opacity - 75) / 25) * 0.15;
+  }
+
+  /*
+   * Blur follows the same visual scale.
+   *
+   * At 0%, blur must disappear completely because
+   * the page itself disappears.
+   */
+  const blurFactor =
+    opacity <= 0
+      ? 0
+      : opacityFactor;
 
   r.style.setProperty(
     '--page-opacity',
     String(opacity / 100)
   );
 
+  r.style.setProperty(
+    '--page-opacity-factor',
+    String(opacityFactor)
+  );
+
+  r.style.setProperty(
+    '--page-blur-factor',
+    String(blurFactor)
+  );
+
+  /*
+   * 0% is the true floating-text mode.
+   *
+   * CSS can use this class to remove the page surface,
+   * page blur, border and shadow completely.
+   */
+  r.classList.toggle(
+    'floating-text',
+    opacity === 0
+  );
+
   $('fsRange').value = prefs.fs;
+
   $('volRange').value = prefs.vol;
 
   if ($('opacityRange')) {
-    $('opacityRange').value = opacity;
+    $('opacityRange').value =
+      String(opacity);
   }
 
   $('handAll').checked =

@@ -88,6 +88,7 @@
 
 
 // Reader toolbar and settings panel wiring.
+
 import { saveMeta, themeOf } from '../app/books.js';
 import { enc } from '../app/helpers.js';
 import { changePrefs } from '../app/sync.js';
@@ -97,40 +98,74 @@ import { $, prefs } from '../lib/utils.js';
 import { hideSelPop } from './annotations.js';
 import { renderTab } from './drawer.js';
 import { onScroll } from './position.js';
-import { applyReaderPrefs, applyTheme, closePanels, cur, updateWhy } from './reader.js';
+import {
+  applyReaderPrefs,
+  applyTheme,
+  closePanels,
+  cur,
+  updateWhy
+} from './reader.js';
 
 $('backBtn').addEventListener('click', () => {
   location.hash = '#/book/' + enc(cur.meta.id);
 });
 
-$('drawerClose').addEventListener('click', closePanels);
+$('drawerClose').addEventListener(
+  'click',
+  closePanels
+);
 
 $('tocBtn').addEventListener('click', () => {
-  const open = !$('drawer').classList.contains('open');
+  const open =
+    !$('drawer').classList.contains('open');
+
   closePanels();
+
   if (open) {
     $('drawer').classList.add('open');
     $('scrim').hidden = false;
-    $('tocBtn').setAttribute('aria-expanded', 'true');
+
+    $('tocBtn').setAttribute(
+      'aria-expanded',
+      'true'
+    );
+
     renderTab();
+
     const f =
-      $('tabBody').querySelector('[aria-current="true"]') || $('tabBody').querySelector('button,input');
+      $('tabBody').querySelector(
+        '[aria-current="true"]'
+      ) ||
+      $('tabBody').querySelector(
+        'button,input'
+      );
+
     f && f.focus();
   }
 });
 
 $('setBtn').addEventListener('click', () => {
   const open = $('sheet').hidden;
+
   closePanels();
+
   if (open) {
     $('sheet').hidden = false;
     $('scrim').hidden = false;
-    $('setBtn').setAttribute('aria-expanded', 'true');
+
+    $('setBtn').setAttribute(
+      'aria-expanded',
+      'true'
+    );
+
     $('themeSel').focus();
   }
 });
 
-$('scrim').addEventListener('click', closePanels);
+$('scrim').addEventListener(
+  'click',
+  closePanels
+);
 
 addEventListener('keydown', e => {
   if (e.key === 'Escape') {
@@ -143,42 +178,118 @@ addEventListener(
   'scroll',
   () => {
     onScroll();
-    if (!$('selpop').hidden) hideSelPop();
+
+    if (!$('selpop').hidden) {
+      hideSelPop();
+    }
   },
   { passive: true }
 );
 
-$('themeSel').addEventListener('change', async e => {
-  cur.meta.theme = e.target.value;
-  cur.meta.aiReason = '';
-  await saveMeta(cur.meta);
-  applyTheme(themeOf(cur.meta));
-  updateWhy();
-});
+$('themeSel').addEventListener(
+  'change',
+  async e => {
+    cur.meta.theme = e.target.value;
+    cur.meta.aiReason = '';
 
-$('fsRange').addEventListener('input', e => {
-  changePrefs({ fs: +e.target.value });
-  applyReaderPrefs();
-});
+    await saveMeta(cur.meta);
 
-$('volRange').addEventListener('input', e => {
-  changePrefs({ vol: +e.target.value });
-  Ambience.volume();
-});
+    applyTheme(
+      themeOf(cur.meta)
+    );
 
-$('opacityRange').addEventListener('input', e => {
-  const value = Math.max(0, Math.min(100, +e.target.value));
-  changePrefs({ pageOpacity: value, pageOpacitySet: true });
-  applyReaderPrefs();
-});
+    updateWhy();
+  }
+);
 
-$('handAll').addEventListener('change', e => {
-  changePrefs({ handAll: e.target.checked });
-  applyReaderPrefs();
-});
+$('fsRange').addEventListener(
+  'input',
+  e => {
+    changePrefs({
+      fs: +e.target.value
+    });
 
-$('motionOn').addEventListener('change', e => {
-  changePrefs({ motion: e.target.checked });
-  if (prefs.motion) Main.start();
-  else Main.stop();
-});
+    applyReaderPrefs();
+  }
+);
+
+$('volRange').addEventListener(
+  'input',
+  e => {
+    changePrefs({
+      vol: +e.target.value
+    });
+
+    Ambience.volume();
+  }
+);
+
+/*
+ * Page opacity
+ *
+ * Updates:
+ * 1. The saved preference
+ * 2. The actual reader surface
+ * 3. The percentage label immediately
+ *    while the slider is being dragged
+ */
+$('opacityRange').addEventListener(
+  'input',
+  e => {
+    const value = Math.max(
+      0,
+      Math.min(100, +e.target.value)
+    );
+
+    changePrefs({
+      pageOpacity: value,
+      pageOpacitySet: true
+    });
+
+    applyReaderPrefs();
+
+    /*
+     * Update whichever percentage element
+     * exists in the settings UI.
+     *
+     * Supports either:
+     *   #opacityValue
+     * or
+     *   #opacityLabel
+     */
+    const valueEl =
+      $('opacityValue') ||
+      $('opacityLabel');
+
+    if (valueEl) {
+      valueEl.textContent =
+        `${value}%`;
+    }
+  }
+);
+
+$('handAll').addEventListener(
+  'change',
+  e => {
+    changePrefs({
+      handAll: e.target.checked
+    });
+
+    applyReaderPrefs();
+  }
+);
+
+$('motionOn').addEventListener(
+  'change',
+  e => {
+    changePrefs({
+      motion: e.target.checked
+    });
+
+    if (prefs.motion) {
+      Main.start();
+    } else {
+      Main.stop();
+    }
+  }
+);
