@@ -21,7 +21,7 @@ import skyIslands from './worlds/sky-islands.js';
 import astralObservatory from './worlds/astral-observatory.js';
 import desertKingdom from './worlds/desert-kingdom.js';
 import hauntedManor from './worlds/haunted-manor.js';
-import enchantedForest from './worlds/enchanted-forest.js';
+//import enchantedForest from './worlds/enchanted-forest.js';
 
 // Every world's animated background, keyed by theme name.
 export const SCENES = {
@@ -37,5 +37,5 @@ export const SCENES = {
   astralObservatory,
   desertKingdom,
   hauntedManor,
-  enchantedForest,
+  //enchantedForest,
 };
