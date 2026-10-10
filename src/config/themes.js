@@ -74,25 +74,36 @@ export const THEMES = {
     }
   },
 
+  /* ======================= Celestial Frontier ======================= */
+
   cosmos: {
-    name: 'Deep space',
-    best: 'Science fiction, space travel and strange machines.',
+    name: 'Celestial Frontier',
+    best: 'Deep-space exploration, orbital stations, alien worlds and cosmic adventures.',
     title: 'Orbitron',
     body: 'Spectral',
     hand: 'Caveat',
     hs: 1.35,
-    panel: 'rgba(6,9,26,.66)',
-    text: '#dfe6f6',
-    accent: '#84d6ec',
-    bar: 'rgba(5,7,20,.86)',
-    edge: 'rgba(132,214,236,.22)',
-    hl: 'rgba(132,214,236,.32)',
-    paper: '#eef2fa',
-    ink: '#1a2748',
-    rule: 'rgba(40,70,140,.18)',
+
+    panel: 'rgba(4,8,20,.72)',
+    text: '#e9f3ff',
+    accent: '#6edcff',
+    bar: 'rgba(3,6,16,.90)',
+    edge: 'rgba(110,220,255,.28)',
+    hl: 'rgba(91,177,255,.30)',
+
+    paper: '#eef4fb',
+    ink: '#17243d',
+    rule: 'rgba(70,120,180,.18)',
+
     orn: '✦',
-    spine: ['#1f2a66', '#0a0e2a', '#a4e6f4'],
-    rain: '170,190,230'
+
+    spine: [
+      '#28517a',
+      '#081426',
+      '#82dfff'
+    ],
+
+    rain: '125,175,220'
   },
 
   ocean: {
