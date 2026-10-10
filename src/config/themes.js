@@ -181,6 +181,7 @@
 
 // Reading worlds: colours, fonts, handwriting, typography and world configuration.
 
+
 /* ============================== Themes ============================== */
 
 export const THEMES = {
@@ -533,7 +534,6 @@ export const THEMES = {
     rain: '65,185,220',
 
     /*
-
      * World configuration.
      *
      * These values are consumed by the animated world renderer.
@@ -744,7 +744,6 @@ export const THEMES = {
 
 
       /*
-
        * Small ambient events prevent the city from feeling
        * like a looping wallpaper.
        */
@@ -920,6 +919,57 @@ export const THEMES = {
 
     rain: '150,165,215'
 
+  },
+
+
+  /* ======================== Desert Kingdom ======================== */
+
+  desertKingdom: {
+
+    name: 'Desert Kingdom',
+
+    best: 'Arabian fantasy, magical adventures, ancient kingdoms, romance and tales of the desert.',
+
+    title: 'Cinzel Decorative',
+
+    body: 'Spectral',
+
+    hand: 'Caveat',
+
+    hs: 1.35,
+
+    panel: 'rgba(32,20,22,.68)',
+
+    text: '#fff4df',
+
+    accent: '#f4c56d',
+
+    bar: 'rgba(25,15,18,.88)',
+
+    edge: 'rgba(244,197,109,.30)',
+
+    hl: 'rgba(255,206,117,.28)',
+
+    paper: '#fff4df',
+
+    ink: '#241a24',
+
+    rule: 'rgba(145,95,60,.20)',
+
+    orn: '☾',
+
+    spine: [
+
+      '#8a4f35',
+
+      '#38222b',
+
+      '#f0bd69'
+
+    ],
+
+    rain: '215,175,125'
+
   }
 
 };
@@ -930,48 +980,63 @@ export const THEMES = {
 export const FONT_SPEC = {
 
   'EB Garamond':
+
     'EB+Garamond:ital,wght@0,400;0,600;1,400',
 
   'Pinyon Script':
+
     'Pinyon+Script',
 
   'Cormorant Garamond':
+
     'Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400',
 
   Meddon:
+
     'Meddon',
 
   'Libre Baskerville':
+
     'Libre+Baskerville:ital,wght@0,400;0,700;1,400',
 
   'Petit Formal Script':
+
     'Petit+Formal+Script',
 
   Spectral:
+
     'Spectral:ital,wght@0,400;0,500;1,400',
 
   Orbitron:
+
     'Orbitron:wght@400;500;600;700',
 
   Caveat:
+
     'Caveat:wght@400;600',
 
   'Crimson Text':
+
     'Crimson+Text:ital,wght@0,400;0,600;1,400',
 
   'Homemade Apple':
+
     'Homemade+Apple',
 
   Tangerine:
+
     'Tangerine:wght@400;700',
 
   'Special Elite':
+
     'Special+Elite',
 
   'Old Standard TT':
+
     'Old+Standard+TT:ital,wght@0,400;0,700;1,400',
 
   'Cinzel Decorative':
+
     'Cinzel+Decorative:wght@400;500;600;700;800;900'
 
 };
@@ -984,9 +1049,11 @@ export const FALLBACK = {
   title: 'Georgia, serif',
 
   body:
+
     "Georgia, 'Times New Roman', serif",
 
   hand:
+
     "'Segoe Script','Snell Roundhand','Apple Chancery',cursive"
 
 };
@@ -995,7 +1062,9 @@ export const FALLBACK = {
 /* ========================== Font Loading =========================== */
 
 const loadedFonts = new Set([
+
   'Spectral'
+
 ]);
 
 
@@ -1004,9 +1073,13 @@ export function ensureFonts(list) {
   const need = [...new Set(list)]
 
     .filter(
+
       f =>
+
         FONT_SPEC[f] &&
+
         !loadedFonts.has(f)
+
     );
 
 
@@ -1014,11 +1087,14 @@ export function ensureFonts(list) {
 
 
   need.forEach(f =>
+
     loadedFonts.add(f)
+
   );
 
 
   const l =
+
     document.createElement('link');
 
 
@@ -1026,14 +1102,21 @@ export function ensureFonts(list) {
 
 
   l.href =
+
     'https://fonts.googleapis.com/css2?' +
 
     need
+
       .map(
+
         f =>
+
           'family=' +
+
           FONT_SPEC[f]
+
       )
+
       .join('&') +
 
     '&display=swap';
@@ -1047,7 +1130,11 @@ export function ensureFonts(list) {
 /* =========================== Font Stack ============================= */
 
 export const fontStack = (
+
   f,
+
   kind
+
 ) =>
+
   `"${f}", ${FALLBACK[kind]}`;
