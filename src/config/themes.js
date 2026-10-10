@@ -177,11 +177,13 @@ export const THEMES = {
     ink: '#dff9ff',
     rule: 'rgba(70,220,255,.18)',
     orn: '✦',
+
     spine: [
       '#16d9ff',
       '#071525',
       '#ff35c8'
     ],
+
     rain: '65,185,220',
 
     /*
@@ -205,12 +207,14 @@ export const THEMES = {
           sky: '#030711',
           horizon: '#081525',
           ground: '#050911',
+
           neon: [
             '#00eaff',
             '#ff2bb5',
             '#8b5cff',
             '#39ff88'
           ],
+
           density: 1.0,
           traffic: 1.0,
           people: 1.0,
@@ -225,12 +229,14 @@ export const THEMES = {
           sky: '#07040d',
           horizon: '#180b1b',
           ground: '#09060e',
+
           neon: [
             '#ff2bb5',
             '#ff7a18',
             '#00eaff',
             '#ffe15a'
           ],
+
           density: 0.9,
           traffic: 0.65,
           people: 1.35,
@@ -245,12 +251,14 @@ export const THEMES = {
           sky: '#020611',
           horizon: '#07142a',
           ground: '#02040a',
+
           neon: [
             '#00eaff',
             '#4c7dff',
             '#b45cff',
             '#ff35c8'
           ],
+
           density: 1.35,
           traffic: 1.4,
           people: 0.35,
@@ -265,11 +273,13 @@ export const THEMES = {
           sky: '#02050a',
           horizon: '#0b1118',
           ground: '#05080c',
+
           neon: [
             '#00c8ff',
             '#ff3b91',
             '#66ffcc'
           ],
+
           density: 0.65,
           traffic: 0.45,
           people: 0.25,
@@ -284,11 +294,13 @@ export const THEMES = {
           sky: '#01040b',
           horizon: '#071326',
           ground: '#05070c',
+
           neon: [
             '#00eaff',
             '#ff35c8',
             '#8d6cff'
           ],
+
           density: 1.5,
           traffic: 0.35,
           people: 0.3,
@@ -431,6 +443,38 @@ export const THEMES = {
     rain: '215,175,125'
   },
 
+  /* ======================= Medieval Kingdom ======================= */
+
+  medievalKingdom: {
+    name: 'Medieval Kingdom',
+    best: 'Fantasy kingdoms, knights, castles, quests, royal adventures and medieval tales.',
+    title: 'Cinzel Decorative',
+    body: 'Spectral',
+    hand: 'Caveat',
+    hs: 1.30,
+
+    panel: 'rgba(18,17,20,.70)',
+    text: '#f1ead9',
+    accent: '#d8ad62',
+    bar: 'rgba(14,13,15,.88)',
+    edge: 'rgba(216,173,98,.28)',
+    hl: 'rgba(216,173,98,.30)',
+
+    paper: '#f2ead8',
+    ink: '#241d19',
+    rule: 'rgba(95,75,55,.20)',
+
+    orn: '⚜',
+
+    spine: [
+      '#63402b',
+      '#261a17',
+      '#d7b36a'
+    ],
+
+    rain: '165,165,165'
+  },
+
   /* ======================== Haunted Manor ======================== */
 
   hauntedManor: {
@@ -559,7 +603,6 @@ export const FALLBACK = {
 const loadedFonts = new Set([
   'Spectral'
 ]);
-
 
 export function ensureFonts(list) {
   const need = [...new Set(list)]
