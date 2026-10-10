@@ -18,6 +18,7 @@ import forest from './worlds/forest.js';
 import whimsical from './worlds/whimsical.js';
 import neon from './worlds/neon.js';
 import skyIslands from './worlds/sky-islands.js';
+import astralObservatory from './worlds/astral-observatory.js';
 
 // Every world's animated background, keyed by theme name.
 export const SCENES = {
@@ -30,4 +31,5 @@ export const SCENES = {
   whimsical,
   neon,
   skyIslands,
+  astralObservatory,
 };
