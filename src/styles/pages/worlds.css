@@ -1,4 +1,4 @@
-/* ---------- Worlds ---------- */
+/* ---------- Worlds ----------
 .worlds {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
@@ -51,4 +51,148 @@
 .wcard .spec small {
   color: var(--muted);
   font-size: 0.82rem;
+} */
+
+
+/* ---------- Worlds ---------- */
+
+.worlds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: 1.6rem;
+  margin-top: 2rem;
+
+  /* Keep the grid layout isolated from unrelated page content. */
+  contain: layout;
+}
+
+.wcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  /*
+   * Isolate each card's layout and paint work.
+   * This is especially useful because every card contains
+   * an animated canvas.
+   */
+  contain: layout paint style;
+
+  /*
+   * Let the browser skip rendering cards that are well
+   * outside the viewport.
+   */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 520px;
+}
+
+.wcard .pv {
+  position: relative;
+  aspect-ratio: 4 / 3;
+
+  /*
+   * Keep canvas rendering isolated inside the preview.
+   */
+  contain: strict;
+
+  overflow: hidden;
+}
+
+.wcard .pv canvas {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  display: block;
+
+  /*
+   * Prevent the canvas from affecting surrounding
+   * layout or paint calculations.
+   */
+  contain: strict;
+}
+
+.wcard .body {
+  padding: 1rem 1.2rem 1.2rem;
+}
+
+.wcard h2 {
+  font-size: 1.7rem;
+  margin: 0 0 0.3rem;
+}
+
+.wcard .for {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.wcard .spec {
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+
+  display: grid;
+  gap: 0.35rem;
+}
+
+.wcard .spec .s1 {
+  font-size: 1.15rem;
+}
+
+.wcard .spec .s2 {
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.wcard .spec small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 700px) {
+  .worlds {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+
+  .wcard h2 {
+    font-size: 1.5rem;
+  }
+
+  .wcard .body {
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  .wcard .spec .s1 {
+    font-size: 1.05rem;
+  }
+
+  .wcard .spec .s2 {
+    font-size: 1.35rem;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1100px) {
+  .worlds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .wcard .pv canvas {
+    animation: none !important;
+  }
 }
