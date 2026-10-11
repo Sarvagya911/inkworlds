@@ -542,6 +542,38 @@ export const THEMES = {
     ],
 
     rain: '150,175,145'
+  },
+
+  /* ============================ Lunareth ============================ */
+
+  lunareth: {
+    name: 'Lunareth',
+    best: 'A grounded isekai realm of kingdoms, adventurers, taverns, rivers and forgotten forests.',
+    title: 'Cinzel Decorative',
+    body: 'Cormorant Garamond',
+    hand: 'Caveat',
+    hs: 1.35,
+
+    panel: 'rgba(30,34,31,.66)',
+    text: '#eee8dc',
+    accent: '#c9a46c',
+    bar: 'rgba(28,31,29,.88)',
+    edge: 'rgba(201,164,108,.28)',
+    hl: 'rgba(201,164,108,.30)',
+
+    paper: '#f1eadb',
+    ink: '#302c2a',
+    rule: 'rgba(91,78,61,.18)',
+
+    orn: '✦',
+
+    spine: [
+      '#695247',
+      '#302c28',
+      '#c7a36d'
+    ],
+
+    rain: '185,175,150'
   }
 };
 
