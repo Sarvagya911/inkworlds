@@ -15,7 +15,9 @@
 
 <header class="site">
   <div class="row">
+
     <a class="logo" href="#/">Inkworlds</a>
+
     <nav class="nav" aria-label="Main">
       <a href="#/library" data-nav="library">Library</a>
       <a href="#/discover" data-nav="discover">Discover</a>
@@ -25,7 +27,23 @@
       <a href="#/stats" data-nav="stats">Reading stats</a>
       <a href="#/settings" data-nav="settings">Settings</a>
     </nav>
+
     <div class="acct" id="acct"></div>
+
+    <details class="mobile-menu">
+      <summary aria-label="Open navigation menu">☰</summary>
+
+      <nav aria-label="Mobile navigation">
+        <a href="#/library">Library</a>
+        <a href="#/discover">Discover</a>
+        <a href="#/communities">Communities</a>
+        <a href="#/worlds">Worlds</a>
+        <a href="#/highlights">Highlights</a>
+        <a href="#/stats">Reading stats</a>
+        <a href="#/settings">Settings</a>
+      </nav>
+    </details>
+
   </div>
 </header>
 
@@ -139,5 +157,48 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script type="module" src="/src/main.js"></script>
+
+<script>
+  const mobileMenu = document.querySelector('.mobile-menu');
+  let menuCloseTimer;
+
+  if (mobileMenu) {
+
+    function closeMobileMenu() {
+      if (!mobileMenu.hasAttribute('open')) return;
+
+      mobileMenu.classList.add('closing');
+
+      clearTimeout(menuCloseTimer);
+
+      menuCloseTimer = setTimeout(() => {
+        mobileMenu.removeAttribute('open');
+        mobileMenu.classList.remove('closing');
+      }, 220);
+    }
+
+    mobileMenu.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', closeMobileMenu);
+    });
+
+    document.addEventListener('click', event => {
+      if (
+        mobileMenu.hasAttribute('open') &&
+        !mobileMenu.contains(event.target)
+      ) {
+        closeMobileMenu();
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        closeMobileMenu();
+      }
+    });
+
+    window.addEventListener('hashchange', closeMobileMenu);
+  }
+</script>
+
 </body>
 </html>

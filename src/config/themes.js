@@ -74,36 +74,49 @@ export const THEMES = {
     }
   },
 
-  /* ======================= Celestial Frontier ======================= */
+  /* ======================= CELESTIAL FRONTIER ======================= */
+
+  /*
+   * The world file is still:
+   *
+   *     cosmos.js
+   *
+   * We are intentionally keeping the key as `cosmos`
+   * so no scene/config/import changes are required.
+   *
+   * The upgraded cosmos.js now represents Celestial Frontier.
+   */
 
   cosmos: {
     name: 'Celestial Frontier',
-    best: 'Deep-space exploration, orbital stations, alien worlds and cosmic adventures.',
-    title: 'Orbitron',
+    best: 'Cosmic exploration, mysterious planets, ancient celestial ruins and journeys beyond the known stars.',
+    title: 'Cinzel Decorative',
     body: 'Spectral',
     hand: 'Caveat',
-    hs: 1.35,
 
-    panel: 'rgba(4,8,20,.72)',
-    text: '#e9f3ff',
-    accent: '#6edcff',
-    bar: 'rgba(3,6,16,.90)',
-    edge: 'rgba(110,220,255,.28)',
-    hl: 'rgba(91,177,255,.30)',
+    hs: 1.30,
 
-    paper: '#eef4fb',
-    ink: '#17243d',
-    rule: 'rgba(70,120,180,.18)',
+    panel: 'rgba(10,11,31,.70)',
+    text: '#eef0ff',
+    accent: '#c5a7ff',
+
+    bar: 'rgba(7,8,24,.90)',
+    edge: 'rgba(197,167,255,.28)',
+    hl: 'rgba(120,211,255,.30)',
+
+    paper: '#eef1fa',
+    ink: '#171a36',
+    rule: 'rgba(90,100,170,.20)',
 
     orn: '✦',
 
     spine: [
-      '#28517a',
-      '#081426',
-      '#82dfff'
+      '#40347d',
+      '#11132f',
+      '#d2baff'
     ],
 
-    rain: '125,175,220'
+    rain: '155,170,220'
   },
 
   ocean: {
@@ -174,19 +187,25 @@ export const THEMES = {
   neon: {
     name: 'Neon City',
     best: 'Cyberpunk mysteries, hackers, megacities, rain-soaked streets and neon nights.',
+
     title: 'Orbitron',
     body: 'Spectral',
     hand: 'Caveat',
+
     hs: 1.25,
+
     panel: 'rgba(5,8,18,.70)',
     text: '#e8f7ff',
     accent: '#28e7ff',
+
     bar: 'rgba(3,6,15,.90)',
     edge: 'rgba(40,231,255,.28)',
     hl: 'rgba(255,48,184,.34)',
+
     paper: '#08111f',
     ink: '#dff9ff',
     rule: 'rgba(70,220,255,.18)',
+
     orn: '✦',
 
     spine: [
@@ -197,17 +216,9 @@ export const THEMES = {
 
     rain: '65,185,220',
 
-    /*
-     * World configuration.
-     *
-     * These values are consumed by the animated world renderer.
-     *
-     * The world is intentionally described as a collection of
-     * locations instead of one static background.
-     */
-
     world: {
       type: 'neon-city',
+
       transitionMs: 60000,
 
       locations: [
@@ -215,6 +226,7 @@ export const THEMES = {
           id: 'downtown',
           name: 'Neon District',
           description: 'Rain-slick towers, crowded streets and holographic signs.',
+
           sky: '#030711',
           horizon: '#081525',
           ground: '#050911',
@@ -237,6 +249,7 @@ export const THEMES = {
           id: 'market',
           name: 'Night Market',
           description: 'Crowded alleys filled with stalls, signs, steam and passing crowds.',
+
           sky: '#07040d',
           horizon: '#180b1b',
           ground: '#09060e',
@@ -259,6 +272,7 @@ export const THEMES = {
           id: 'skyway',
           name: 'Skyway',
           description: 'Elevated highways cutting between enormous towers above the city.',
+
           sky: '#020611',
           horizon: '#07142a',
           ground: '#02040a',
@@ -281,6 +295,7 @@ export const THEMES = {
           id: 'outskirts',
           name: 'City Outskirts',
           description: 'The endless skyline fades into industrial districts and distant lights.',
+
           sky: '#02050a',
           horizon: '#0b1118',
           ground: '#05080c',
@@ -302,6 +317,7 @@ export const THEMES = {
           id: 'rooftops',
           name: 'Rooftop Sector',
           description: 'A high view over the city, with aircraft, antennas and distant towers.',
+
           sky: '#01040b',
           horizon: '#071326',
           ground: '#05070c',
@@ -319,11 +335,6 @@ export const THEMES = {
           lights: 1.25
         }
       ],
-
-      /*
-       * Small ambient events prevent the city from feeling
-       * like a looping wallpaper.
-       */
 
       events: {
         lightFlicker: {
@@ -361,7 +372,7 @@ export const THEMES = {
     }
   },
 
-  /* ========================== Sky Islands ========================== */
+  /* ========================== New Worlds ========================== */
 
   skyIslands: {
     name: 'Sky Islands',
@@ -370,14 +381,8 @@ export const THEMES = {
     body: 'EB Garamond',
     hand: 'Pinyon Script',
     hs: 1.35,
-
-    // Dark translucent panel gives the chapter text a readable surface
-    // against the bright sunset/cloud background.
     panel: 'rgba(24,18,24,.72)',
-
-    // Bright warm text remains readable over the fantasy artwork.
     text: '#fff4df',
-
     accent: '#ffd06a',
     bar: 'rgba(28,20,25,.86)',
     edge: 'rgba(255,208,106,.28)',
@@ -386,17 +391,9 @@ export const THEMES = {
     ink: '#302014',
     rule: 'rgba(255,220,170,.22)',
     orn: '✦',
-
-    spine: [
-      '#8b542f',
-      '#402514',
-      '#e7c477'
-    ],
-
+    spine: ['#8b542f', '#402514', '#e7c477'],
     rain: '190,180,165'
   },
-
-  /* ======================= Astral Observatory ======================= */
 
   astralObservatory: {
     name: 'Astral Observatory',
@@ -415,17 +412,9 @@ export const THEMES = {
     ink: '#171b38',
     rule: 'rgba(90,110,180,.20)',
     orn: '✦',
-
-    spine: [
-      '#353078',
-      '#11132f',
-      '#c7b8ff'
-    ],
-
+    spine: ['#353078', '#11132f', '#c7b8ff'],
     rain: '150,165,215'
   },
-
-  /* ======================== Desert Kingdom ======================== */
 
   desertKingdom: {
     name: 'Desert Kingdom',
@@ -444,49 +433,9 @@ export const THEMES = {
     ink: '#241a24',
     rule: 'rgba(145,95,60,.20)',
     orn: '☾',
-
-    spine: [
-      '#8a4f35',
-      '#38222b',
-      '#f0bd69'
-    ],
-
+    spine: ['#8a4f35', '#38222b', '#f0bd69'],
     rain: '215,175,125'
   },
-
-  /* ======================= Medieval Kingdom ======================= */
-
-  medievalKingdom: {
-    name: 'Medieval Kingdom',
-    best: 'Fantasy kingdoms, knights, castles, quests, royal adventures and medieval tales.',
-    title: 'Cinzel Decorative',
-    body: 'Spectral',
-    hand: 'Caveat',
-    hs: 1.30,
-
-    panel: 'rgba(18,17,20,.70)',
-    text: '#f1ead9',
-    accent: '#d8ad62',
-    bar: 'rgba(14,13,15,.88)',
-    edge: 'rgba(216,173,98,.28)',
-    hl: 'rgba(216,173,98,.30)',
-
-    paper: '#f2ead8',
-    ink: '#241d19',
-    rule: 'rgba(95,75,55,.20)',
-
-    orn: '⚜',
-
-    spine: [
-      '#63402b',
-      '#261a17',
-      '#d7b36a'
-    ],
-
-    rain: '165,165,165'
-  },
-
-  /* ======================== Haunted Manor ======================== */
 
   hauntedManor: {
     name: 'Haunted Manor',
@@ -505,17 +454,9 @@ export const THEMES = {
     ink: '#171b20',
     rule: 'rgba(80,105,90,.20)',
     orn: '✦',
-
-    spine: [
-      '#303b43',
-      '#11161d',
-      '#b7d8c0'
-    ],
-
+    spine: ['#303b43', '#11161d', '#b7d8c0'],
     rain: '145,165,155'
   },
-
-  /* ======================== Enchanted Forest ======================== */
 
   enchantedForest: {
     name: 'Enchanted Forest',
@@ -534,17 +475,30 @@ export const THEMES = {
     ink: '#1d291b',
     rule: 'rgba(70,100,55,.20)',
     orn: '❧',
-
-    spine: [
-      '#31512f',
-      '#112315',
-      '#b7d67b'
-    ],
-
+    spine: ['#31512f', '#112315', '#b7d67b'],
     rain: '150,175,145'
   },
 
-  /* ============================ Lunareth ============================ */
+  medievalKingdom: {
+    name: 'Medieval Kingdom',
+    best: 'Fantasy kingdoms, knights, castles, quests, royal adventures and medieval tales.',
+    title: 'Cinzel Decorative',
+    body: 'Spectral',
+    hand: 'Caveat',
+    hs: 1.30,
+    panel: 'rgba(18,17,20,.70)',
+    text: '#f1ead9',
+    accent: '#d8ad62',
+    bar: 'rgba(14,13,15,.88)',
+    edge: 'rgba(216,173,98,.28)',
+    hl: 'rgba(216,173,98,.30)',
+    paper: '#f2ead8',
+    ink: '#241d19',
+    rule: 'rgba(95,75,55,.20)',
+    orn: '⚜',
+    spine: ['#63402b', '#261a17', '#d7b36a'],
+    rain: '165,165,165'
+  },
 
   lunareth: {
     name: 'Lunareth',
@@ -553,30 +507,22 @@ export const THEMES = {
     body: 'Cormorant Garamond',
     hand: 'Caveat',
     hs: 1.35,
-
     panel: 'rgba(30,34,31,.66)',
     text: '#eee8dc',
     accent: '#c9a46c',
     bar: 'rgba(28,31,29,.88)',
     edge: 'rgba(201,164,108,.28)',
     hl: 'rgba(201,164,108,.30)',
-
     paper: '#f1eadb',
     ink: '#302c2a',
     rule: 'rgba(91,78,61,.18)',
-
     orn: '✦',
-
-    spine: [
-      '#695247',
-      '#302c28',
-      '#c7a36d'
-    ],
-
+    spine: ['#695247', '#302c28', '#c7a36d'],
     rain: '185,175,150'
-  }
-};
+  },
 
+  
+};
 
 /* ============================== Fonts ============================== */
 
@@ -624,9 +570,23 @@ export const FONT_SPEC = {
     'Old+Standard+TT:ital,wght@0,400;0,700;1,400',
 
   'Cinzel Decorative':
-    'Cinzel+Decorative:wght@400;500;600;700;800;900'
-};
+    'Cinzel+Decorative:wght@400;700',
 
+  UnifrakturMaguntia:
+    'UnifrakturMaguntia',
+
+  'Playfair Display':
+    'Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400',
+
+  'Henny Penny':
+    'Henny+Penny',
+
+  'IM Fell English SC':
+    'IM+Fell+English+SC',
+
+  Cinzel:
+    'Cinzel:wght@400;500;600;700'
+};
 
 /* ============================ Fallbacks ============================ */
 
@@ -639,7 +599,6 @@ export const FALLBACK = {
   hand:
     "'Segoe Script','Snell Roundhand','Apple Chancery',cursive"
 };
-
 
 /* ========================== Font Loading =========================== */
 
@@ -679,7 +638,6 @@ export function ensureFonts(list) {
 
   document.head.appendChild(l);
 }
-
 
 /* =========================== Font Stack ============================= */
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Inkworlds</string>
+    <string name="title_activity_main">Inkworlds</string>
+    <string name="package_name">com.sarvagya.inkworlds</string>
+    <string name="custom_url_scheme">com.sarvagya.inkworlds</string>
+</resources>

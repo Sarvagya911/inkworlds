@@ -10,10 +10,13 @@
     "format": "prettier --write \"src/**/*.{js,css}\" \"server/**/*.js\""
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@supabase/supabase-js": "^2.117.2"
   },
   "devDependencies": {
-    "vite": "^7.3.6",
-    "prettier": "^3.6.2"
+    "@capacitor/cli": "^8.5.3",
+    "prettier": "^3.6.2",
+    "vite": "^7.3.6"
   }
 }
