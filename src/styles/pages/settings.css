@@ -3,8 +3,18 @@
   display: grid;
   gap: 1.6rem;
   max-width: 40rem;
-  margin-top: 1.6rem;
+  margin: 1.6rem auto 0;
 }
+
+@media (min-width: 701px) {
+  .view:has(.settings) > .page-title,
+  .view:has(.settings) > .lede {
+    margin-left: 14.5rem;
+  }
+}
+
+/* ---------- Settings groups ---------- */
+
 .set-group {
   background: var(--card);
   border: 1px solid var(--line);
@@ -37,3 +47,5 @@
 .set-row input[type='range'] {
   width: 10rem;
 }
+
+/* ---------- Settings buttons ---------- */

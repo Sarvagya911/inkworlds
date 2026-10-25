@@ -777,3 +777,96 @@ select.input {
     overflow-x: hidden;
   }
 }
+
+/* =========================================================
+   PHONE APP SHELL
+   ========================================================= */
+
+@media (max-width: 640px) {
+
+  /* ---------- Header ---------- */
+
+  .site {
+    box-shadow:
+      0 1px 0 var(--line),
+      0 5px 18px rgba(0, 0, 0, 0.08);
+  }
+
+  .site .row {
+    min-height: 3.6rem;
+    padding: 0.45rem 0.8rem;
+    gap: 0.45rem;
+  }
+
+
+  /* ---------- Logo ---------- */
+
+  .logo {
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+
+  /* ---------- Sign in ---------- */
+
+  .acct .btn {
+    min-height: 2.45rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.88rem;
+    touch-action: manipulation;
+  }
+
+
+  /* ---------- Hamburger ---------- */
+
+  .mobile-menu summary {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.15rem;
+    touch-action: manipulation;
+  }
+
+
+  /* ---------- Menu ---------- */
+
+  .mobile-menu nav {
+    overscroll-behavior: contain;
+  }
+
+  .mobile-menu nav a {
+    min-height: 2.8rem;
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.8rem;
+    box-sizing: border-box;
+    touch-action: manipulation;
+  }
+
+
+  /* ---------- Remove Android tap highlight ---------- */
+
+  .logo,
+  .nav a,
+  .mobile-menu summary,
+  .mobile-menu nav a,
+  .btn {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .logo:focus {
+    outline: none;
+  }
+
+  .logo:focus-visible {
+    outline:
+      2px solid
+      color-mix(
+        in srgb,
+        var(--brass) 70%,
+        transparent
+      );
+
+    outline-offset: 3px;
+  }
+}

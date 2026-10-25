@@ -87,6 +87,7 @@
 // });
 
 
+
 // Reader toolbar and settings panel wiring.
 
 import { saveMeta, themeOf } from '../app/books.js';
@@ -106,73 +107,252 @@ import {
   updateWhy
 } from './reader.js';
 
-$('backBtn').addEventListener('click', () => {
-  location.hash = '#/book/' + enc(cur.meta.id);
-});
+
+/* ---------------------------------------------------------
+ * Mobile bottom-sheet swipe-to-close
+ * --------------------------------------------------------- */
+
+const swipeSheet = $('sheet');
+const sheetHandle = $('sheetHandle');
+
+if (swipeSheet && sheetHandle) {
+  let dragging = false;
+  let startY = 0;
+  let currentY = 0;
+  let pointerId = null;
+
+  sheetHandle.addEventListener(
+    'pointerdown',
+    e => {
+      dragging = true;
+      pointerId = e.pointerId;
+
+      startY = e.clientY;
+      currentY = e.clientY;
+
+      sheetHandle.setPointerCapture(
+        e.pointerId
+      );
+
+      swipeSheet.style.transition = 'none';
+      swipeSheet.style.willChange = 'transform';
+
+      e.preventDefault();
+    }
+  );
+
+
+  sheetHandle.addEventListener(
+    'pointermove',
+    e => {
+      if (
+        !dragging ||
+        e.pointerId !== pointerId
+      ) {
+        return;
+      }
+
+      currentY = e.clientY;
+
+      const distance =
+        Math.max(
+          0,
+          currentY - startY
+        );
+
+      e.preventDefault();
+
+      swipeSheet.style.transform =
+        `translate3d(0, ${distance}px, 0)`;
+    },
+    { passive: false }
+  );
+
+
+  function finishSheetDrag(e) {
+    if (
+      !dragging ||
+      (e && e.pointerId !== pointerId)
+    ) {
+      return;
+    }
+
+    if (e) {
+      currentY = e.clientY;
+    }
+
+    dragging = false;
+
+    const distance =
+      Math.max(
+        0,
+        currentY - startY
+      );
+
+    if (
+      pointerId !== null &&
+      sheetHandle.hasPointerCapture(pointerId)
+    ) {
+      try {
+        sheetHandle.releasePointerCapture(
+          pointerId
+        );
+      } catch (_) {
+        // Pointer may already have been released.
+      }
+    }
+
+    pointerId = null;
+
+    swipeSheet.style.transition =
+      'transform 180ms cubic-bezier(.22, 1, .36, 1)';
+
+    if (distance > 90) {
+      swipeSheet.style.transform =
+        'translate3d(0, 100%, 0)';
+
+      setTimeout(() => {
+        swipeSheet.style.transform = '';
+        swipeSheet.style.transition = '';
+        swipeSheet.style.willChange = '';
+
+        closePanels();
+      }, 180);
+
+      return;
+    }
+
+    swipeSheet.style.transform =
+      'translate3d(0, 0, 0)';
+
+    setTimeout(() => {
+      swipeSheet.style.transform = '';
+      swipeSheet.style.transition = '';
+      swipeSheet.style.willChange = '';
+    }, 180);
+  }
+
+
+  sheetHandle.addEventListener(
+    'pointerup',
+    finishSheetDrag
+  );
+
+
+  sheetHandle.addEventListener(
+    'pointercancel',
+    finishSheetDrag
+  );
+}
+
+
+/* ---------------------------------------------------------
+ * Back button
+ * --------------------------------------------------------- */
+
+$('backBtn').addEventListener(
+  'click',
+  () => {
+    location.hash =
+      '#/book/' + enc(cur.meta.id);
+  }
+);
+
+
+/* ---------------------------------------------------------
+ * Drawer
+ * --------------------------------------------------------- */
 
 $('drawerClose').addEventListener(
   'click',
   closePanels
 );
 
-$('tocBtn').addEventListener('click', () => {
-  const open =
-    !$('drawer').classList.contains('open');
 
-  closePanels();
+$('tocBtn').addEventListener(
+  'click',
+  () => {
+    const open =
+      !$('drawer').classList.contains('open');
 
-  if (open) {
-    $('drawer').classList.add('open');
-    $('scrim').hidden = false;
+    closePanels();
 
-    $('tocBtn').setAttribute(
-      'aria-expanded',
-      'true'
-    );
+    if (open) {
+      $('drawer').classList.add('open');
+      $('scrim').hidden = false;
 
-    renderTab();
-
-    const f =
-      $('tabBody').querySelector(
-        '[aria-current="true"]'
-      ) ||
-      $('tabBody').querySelector(
-        'button,input'
+      $('tocBtn').setAttribute(
+        'aria-expanded',
+        'true'
       );
 
-    f && f.focus();
+      renderTab();
+
+      const f =
+        $('tabBody').querySelector(
+          '[aria-current="true"]'
+        ) ||
+        $('tabBody').querySelector(
+          'button,input'
+        );
+
+      f && f.focus();
+    }
   }
-});
+);
 
-$('setBtn').addEventListener('click', () => {
-  const open = $('sheet').hidden;
 
-  closePanels();
+/* ---------------------------------------------------------
+ * Reading settings
+ * --------------------------------------------------------- */
 
-  if (open) {
-    $('sheet').hidden = false;
-    $('scrim').hidden = false;
+$('setBtn').addEventListener(
+  'click',
+  () => {
+    const open =
+      $('sheet').hidden;
 
-    $('setBtn').setAttribute(
-      'aria-expanded',
-      'true'
-    );
+    closePanels();
 
-    $('themeSel').focus();
+    if (open) {
+      $('sheet').hidden = false;
+      $('scrim').hidden = false;
+
+      $('setBtn').setAttribute(
+        'aria-expanded',
+        'true'
+      );
+
+      $('themeSel').focus();
+    }
   }
-});
+);
+
+
+/* ---------------------------------------------------------
+ * Scrim / Escape
+ * --------------------------------------------------------- */
 
 $('scrim').addEventListener(
   'click',
   closePanels
 );
 
-addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closePanels();
-    hideSelPop();
+
+addEventListener(
+  'keydown',
+  e => {
+    if (e.key === 'Escape') {
+      closePanels();
+      hideSelPop();
+    }
   }
-});
+);
+
+
+/* ---------------------------------------------------------
+ * Reader scroll
+ * --------------------------------------------------------- */
 
 addEventListener(
   'scroll',
@@ -186,10 +366,17 @@ addEventListener(
   { passive: true }
 );
 
+
+/* ---------------------------------------------------------
+ * World / theme
+ * --------------------------------------------------------- */
+
 $('themeSel').addEventListener(
   'change',
   async e => {
-    cur.meta.theme = e.target.value;
+    cur.meta.theme =
+      e.target.value;
+
     cur.meta.aiReason = '';
 
     await saveMeta(cur.meta);
@@ -202,6 +389,11 @@ $('themeSel').addEventListener(
   }
 );
 
+
+/* ---------------------------------------------------------
+ * Text size
+ * --------------------------------------------------------- */
+
 $('fsRange').addEventListener(
   'input',
   e => {
@@ -212,6 +404,11 @@ $('fsRange').addEventListener(
     applyReaderPrefs();
   }
 );
+
+
+/* ---------------------------------------------------------
+ * Sound volume
+ * --------------------------------------------------------- */
 
 $('volRange').addEventListener(
   'input',
@@ -224,7 +421,8 @@ $('volRange').addEventListener(
   }
 );
 
-/*
+
+/* ---------------------------------------------------------
  * Page opacity
  *
  * Updates:
@@ -232,14 +430,19 @@ $('volRange').addEventListener(
  * 2. The actual reader surface
  * 3. The percentage label immediately
  *    while the slider is being dragged
- */
+ * --------------------------------------------------------- */
+
 $('opacityRange').addEventListener(
   'input',
   e => {
-    const value = Math.max(
-      0,
-      Math.min(100, +e.target.value)
-    );
+    const value =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          +e.target.value
+        )
+      );
 
     changePrefs({
       pageOpacity: value,
@@ -268,6 +471,11 @@ $('opacityRange').addEventListener(
   }
 );
 
+
+/* ---------------------------------------------------------
+ * Handwritten mode
+ * --------------------------------------------------------- */
+
 $('handAll').addEventListener(
   'change',
   e => {
@@ -278,6 +486,11 @@ $('handAll').addEventListener(
     applyReaderPrefs();
   }
 );
+
+
+/* ---------------------------------------------------------
+ * Background animation
+ * --------------------------------------------------------- */
 
 $('motionOn').addEventListener(
   'change',

@@ -12,3 +12,6 @@
 @import './community.css';
 @import './auth.css';
 @import './reader.css';
+
+/* Claude's mobile-only styling */
+@import './mobile.css';

@@ -1,0 +1,359 @@
+/* =========================================================
+   MOBILE REFINEMENTS
+   Loaded last (see index.css).
+
+   Every rule here lives inside a phone or touch media query,
+   so the desktop layout is untouched. To undo everything,
+   remove the @import of this file from index.css.
+   ========================================================= */
+
+
+/* ---------- Touch devices: comfortable tap targets ---------- */
+
+@media (hover: none) and (pointer: coarse) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  summary,
+  label,
+  select,
+  input[type='range'],
+  input[type='checkbox'] {
+    touch-action: manipulation;
+  }
+
+  /* Hover lift feels sticky on touch screens. */
+  .btn:hover,
+  .spine:hover {
+    transform: none;
+  }
+
+  .btn {
+    min-height: 2.75rem;
+  }
+
+  .btn.small {
+    min-height: 2.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  input[type='checkbox'] {
+    width: 1.4rem;
+    height: 1.4rem;
+    flex: none;
+    accent-color: var(--brass);
+  }
+
+  input[type='range'] {
+    min-height: 2.25rem;
+    accent-color: var(--brass);
+  }
+}
+
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 640px) {
+
+  /* Inputs under 16px make iOS zoom the page when focused. */
+  .sheet input:not([type='range']):not([type='checkbox']),
+  .sheet select,
+  .sheet textarea,
+  .drawer .input,
+  .input,
+  select.input,
+  dialog.modal textarea {
+    font-size: 16px;
+  }
+
+  .input,
+  select.input {
+    min-height: 2.75rem;
+  }
+
+  /* Long words and URLs never push the page sideways. */
+  .view {
+    overflow-wrap: anywhere;
+  }
+
+  .view img,
+  .view video,
+  .view canvas {
+    max-width: 100%;
+  }
+
+  /* ----- Library shelf: long titles stay inside the spine ----- */
+
+  .spine .t {
+    max-height: calc(100% - 1.1rem);
+  }
+
+  .spine .pct {
+    bottom: 0.25rem;
+  }
+
+  /* ----- Worlds: shorter previews so the page is not endless ----- */
+
+  .wcard .pv {
+    aspect-ratio: 16 / 10;
+  }
+
+  /* ----- Book page: compact cover, title sits right under it ----- */
+
+  .book-grid {
+    gap: 1.4rem;
+  }
+
+  .cover {
+    width: min(12.5rem, 56vw);
+    max-width: 12.5rem;
+  }
+
+  .cover .ct {
+    left: 6%;
+    right: 6%;
+    top: 12%;
+    padding: 0.55rem 0.4rem;
+  }
+
+  .cover .ct .h {
+    font-size: 1.05rem;
+  }
+
+  .cover .ct .a {
+    font-size: 0.72rem;
+    margin-top: 0.25rem;
+  }
+
+  /* ----- Stats ----- */
+
+  .kpis {
+    gap: 1rem 0.9rem;
+    margin: 1.4rem 0;
+  }
+
+  .kpi b {
+    font-size: clamp(1.55rem, 7.4vw, 1.95rem);
+    white-space: nowrap;
+  }
+
+  .chart {
+    padding: 1rem;
+  }
+
+  .chart svg text {
+    font-size: 19px;
+  }
+
+  /* Name and time on one line, the bar underneath. */
+  .hbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.3rem 0.8rem;
+  }
+
+  .hbar > :nth-child(1) {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .hbar > :nth-child(3) {
+    grid-column: 2;
+    grid-row: 1;
+    white-space: nowrap;
+  }
+
+  .hbar > .track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .hbars {
+    gap: 0.95rem;
+  }
+
+  /* ----- Highlights: tidy action buttons ----- */
+
+  .hl-item {
+    padding: 1rem;
+  }
+
+  .hl-item blockquote {
+    font-size: 1.08rem;
+  }
+
+  .hl-item .meta {
+    gap: 0.55rem;
+  }
+
+  .hl-item .meta > span:first-child {
+    flex: 1 0 100%;
+  }
+
+  .hl-item .meta .sp {
+    display: none;
+  }
+
+  .hl-item .meta .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    white-space: nowrap;
+  }
+
+  /* ----- Settings: whole row is easy to hit ----- */
+
+  .settings {
+    gap: 1.1rem;
+  }
+
+  .set-group {
+    padding: 1.05rem 1rem;
+  }
+
+  .set-row {
+    min-height: 3.4rem;
+    padding: 0.7rem 0;
+  }
+
+  .set-row input[type='range'] {
+    width: 8.5rem;
+  }
+
+  /* ----- Dialogs become bottom sheets ----- */
+
+  dialog.modal {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    border-radius: 18px 18px 0 0;
+    padding: 1.2rem 1.1rem calc(1.2rem + env(safe-area-inset-bottom, 0px));
+    max-height: 88dvh;
+    overflow-y: auto;
+  }
+
+  dialog.modal .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  dialog.modal .actions .btn {
+    width: 100%;
+  }
+
+  .toast {
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+
+/* ---------- Phone reader ---------- */
+
+@media (max-width: 700px) {
+
+  /* Larger, easier top-bar buttons. */
+  .tb {
+    min-width: 2.6rem;
+    min-height: 2.6rem;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .topbar .row {
+    gap: 0;
+    padding-left: max(0.3rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.3rem, env(safe-area-inset-right, 0px));
+  }
+
+  /* Reading settings, companion and comments rise from the bottom
+     where a thumb can reach them. */
+  .sheet {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(78dvh, 40rem);
+    border-radius: 18px 18px 0 0;
+    border-width: 1px 0 0;
+    padding: 1.1rem max(1.1rem, env(safe-area-inset-right, 0px))
+      calc(1.2rem + env(safe-area-inset-bottom, 0px))
+      max(1.1rem, env(safe-area-inset-left, 0px));
+    overscroll-behavior: contain;
+    box-shadow: 0 -16px 44px rgba(0, 0, 0, 0.4);
+  }
+
+  .sheet-handle {
+    display: block;
+    width: 2.6rem;
+    height: 4px;
+    margin: -0.35rem auto 0.8rem;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.25;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .field {
+    margin-bottom: 1.15rem;
+  }
+
+  .field select {
+    min-height: 2.75rem;
+  }
+
+  .field .check,
+  .field label.check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+  }
+
+  .drawer {
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+
+/* ---------- Landscape phones: give the text room ---------- */
+
+@media (max-height: 480px) and (orientation: landscape) and (max-width: 950px) {
+  .pages {
+    padding-top: calc(3.6rem + env(safe-area-inset-top, 0px));
+  }
+
+  .chapter {
+    margin-bottom: 30dvh;
+  }
+
+  .sheet {
+    left: auto;
+    right: 0;
+    width: min(26rem, 60vw);
+    top: calc(3rem + env(safe-area-inset-top, 0px));
+    bottom: 0;
+    max-height: none;
+    border-radius: 14px 0 0 0;
+    border-width: 1px 0 0 1px;
+  }
+
+  .sheet-handle {
+    display: none;
+  }
+
+  .site .row {
+    min-height: 3rem;
+  }
+}
