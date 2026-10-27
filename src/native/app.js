@@ -102,78 +102,58 @@ function isPanelOpen() {
 
 
 function goBack() {
+  const hash = location.hash || '#/';
 
-  /* Close reader/settings panels first. */
+  // Close an actually open overlay first.
   if (isPanelOpen()) {
     closePanels();
     return;
   }
 
-  /* Close text-selection popup first. */
-  const selpop =
-    document.getElementById('selpop');
-
-  if (
-    selpop &&
-    !selpop.hidden
-  ) {
+  // Close text-selection popup.
+  const selpop = document.getElementById('selpop');
+  if (selpop && !selpop.hidden) {
     hideSelPop();
     return;
   }
 
-  /* Reader → book page. */
-  if (cur) {
-    const id = cur?.meta?.id;
-
-    if (id) {
-      location.hash =
-        '#/book/' +
-        encodeURIComponent(id);
-    } else {
-      location.hash = '#/library';
-    }
-
+  // Normal page routes.
+  if (
+    hash === '#/settings' ||
+    hash === '#/account' ||
+    hash === '#/discover' ||
+    hash === '#/communities' ||
+    hash === '#/worlds' ||
+    hash === '#/highlights' ||
+    hash === '#/stats' ||
+    hash === '#/library'
+  ) {
+    location.hash = '#/';
     return;
   }
 
-  const hash =
-    location.hash || '#/';
-
-
-  /*
-   * Native navigation uses explicit route hierarchy
-   * instead of relying on WebView history.
-   *
-   * This makes Android back reliable even when the
-   * WebView only has one document history entry.
-   */
-
-  /* Book → Library */
+  // Book page.
   if (/^#\/book\/[^/]+/.test(hash)) {
     location.hash = '#/library';
     return;
   }
 
-  /* Community post → Community */
+  // Community post.
   if (/^#\/c\/[^/]+\/p\/[^/]+/.test(hash)) {
-    const match =
-      hash.match(/^#\/c\/([^/]+)\/p\/[^/]+/);
-
+    const match = hash.match(/^#\/c\/([^/]+)\/p\/[^/]+/);
     if (match) {
-      location.hash =
-        '#/c/' + match[1];
-
+      location.hash = '#/c/' + match[1];
       return;
     }
   }
 
-  /* Community → Communities */
+  // Community.
   if (/^#\/c\/[^/]+$/.test(hash)) {
     location.hash = '#/communities';
     return;
   }
 
-  /* Auth screens → Home */
+  // Auth pages.
   if (
     hash === '#/signin' ||
     hash === '#/signup' ||
@@ -186,26 +166,18 @@ function goBack() {
     return;
   }
 
-  /*
-   * Main application pages → Home.
-   */
-  if (
-    hash === '#/library' ||
-    hash === '#/discover' ||
-    hash === '#/communities' ||
-    hash === '#/worlds' ||
-    hash === '#/highlights' ||
-    hash === '#/stats' ||
-    hash === '#/settings' ||
-    hash === '#/account'
-  ) {
-    location.hash = '#/';
+  // If we're inside a book reader, return to the book page.
+  if (cur) {
+    const id = cur?.meta?.id;
+    if (id) {
+      location.hash = '#/book/' + encodeURIComponent(id);
+    } else {
+      location.hash = '#/library';
+    }
     return;
   }
 
-  /*
-   * Home/root → close the Android app.
-   */
+  // Already on home — exit Android app.
   App.exitApp();
 }
 
@@ -315,6 +287,38 @@ function setupEdgeSwipe() {
   );
 }
 
+/* ---------------------------------------------------------
+ * Exit confirmation
+ * --------------------------------------------------------- */
+
+function showExitConfirmation() {
+  const modal = document.getElementById('exitModal');
+  const cancel = document.getElementById('exitCancel');
+  const confirm = document.getElementById('exitConfirm');
+
+  if (!modal || !cancel || !confirm) {
+    App.exitApp();
+    return;
+  }
+
+  modal.hidden = false;
+
+  const close = () => {
+    modal.hidden = true;
+    cancel.removeEventListener('click', close);
+    confirm.removeEventListener('click', exit);
+  };
+
+  const exit = () => {
+    close();
+    App.exitApp();
+  };
+
+  cancel.addEventListener('click', close);
+  confirm.addEventListener('click', exit);
+
+  requestAnimationFrame(() => cancel.focus());
+}
 
 /* ---------------------------------------------------------
  * Native app setup
@@ -362,11 +366,8 @@ export async function initNativeApp() {
    */
   await App.addListener(
     'backButton',
-    () => {
-      goBack();
-    }
+    () => goBack()
   );
-
 
   /*
    * Left-edge swipe for phones and tablets.

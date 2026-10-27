@@ -15,3 +15,5 @@
 
 /* Claude's mobile-only styling */
 @import './mobile.css';
+
+@import './exit-modal.css';

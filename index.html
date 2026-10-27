@@ -206,6 +206,46 @@
     window.addEventListener('hashchange', closeMobileMenu);
   }
 </script>
+  <!-- your existing Inkworlds HTML -->
+
+  <!-- Android exit confirmation -->
+  <div class="exit-modal" id="exitModal" hidden>
+    <div class="exit-modal-backdrop" data-exit-cancel></div>
+
+    <div
+      class="exit-modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="exitModalTitle"
+    >
+      <div class="exit-modal-icon" aria-hidden="true">✦</div>
+
+      <h2 id="exitModalTitle">Leave Inkworlds?</h2>
+
+      <p>
+        Your journey will be waiting for you when you return.
+      </p>
+
+      <div class="exit-modal-actions">
+        <button
+          type="button"
+          class="exit-cancel"
+          id="exitCancel"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="exit-confirm"
+          id="exitConfirm"
+        >
+          Exit
+        </button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
+
