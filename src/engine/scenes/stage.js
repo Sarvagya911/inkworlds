@@ -46,6 +46,16 @@ function initMini(item) {
   return r;
 }
 
+function activateMini(item) {
+  const r = initMini(item);
+
+  if (isScrolling || document.hidden || !prefs.motion) {
+    r.stop();
+  } else {
+    r.start();
+  }
+}
+
 function resumeVisibleMinis() {
   if (document.hidden || !prefs.motion) return;
 
@@ -89,16 +99,8 @@ export function resetMinis() {
         const item = e.target._mini;
         if (!item) return;
 
-        // Initialize only previews that enter the viewport or its preload
-        // margin. If motion is disabled/scrolling, initialize but don't run.
         if (e.isIntersecting) {
-          const r = initMini(item);
-
-          if (isScrolling || document.hidden || !prefs.motion) {
-            r.stop();
-          } else {
-            r.start();
-          }
+          activateMini(item);
         } else if (item.r) {
           item.r.stop();
         }
@@ -106,7 +108,7 @@ export function resetMinis() {
     },
     {
       threshold: 0.05,
-      rootMargin: '300px 0px'
+      rootMargin: '150px 0px'
     }
   );
 }
@@ -116,6 +118,16 @@ export function mountMini(cv, key) {
   cv._mini = item;
   pendingMinis.push(item);
   miniObs.observe(cv);
+
+  // IntersectionObserver can wait for its callback until after layout.
+  // For the previews already on screen, initialize on the very next frame so
+  // the page can paint first without leaving a noticeable blank canvas.
+  if (isVisible(cv)) {
+    requestAnimationFrame(() => {
+      if (item.r || !document.body.contains(cv)) return;
+      activateMini(item);
+    });
+  }
 
   return item;
 }
