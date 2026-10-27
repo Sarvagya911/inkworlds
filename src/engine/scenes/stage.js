@@ -9,14 +9,14 @@ export const Main = new Renderer(document.getElementById('scene'), {
 export let minis = [];
 export let miniObs = null;
 
-// World previews are registered first so the Worlds page can paint quickly.
-// Once the page has painted, every preview is initialized together. This keeps
-// the old smooth scrolling behavior while moving the expensive setup out of
-// the route/navigation step.
+// Register all previews first so the Worlds route can paint immediately.
+// After the first paint, initialize them in small batches. This keeps the
+// expensive setup out of navigation and avoids one large blocking task.
 let pendingMinis = [];
 let scrollTimer = null;
 let isScrolling = false;
 let loadScheduled = false;
+let loadingAll = false;
 
 function isVisible(cv) {
   const rect = cv.getBoundingClientRect();
@@ -47,26 +47,35 @@ function initMini(item) {
   return r;
 }
 
-function loadAllMinis() {
-  loadScheduled = false;
-
-  if (!pendingMinis.length) return;
-
-  // Initialize every world while animation is stopped. The page has already
-  // had a chance to paint, so navigation stays fast and all worlds are ready
-  // before the user starts normal scrolling.
-  const items = pendingMinis.slice();
-
-  items.forEach(item => {
-    if (!item.r) initMini(item);
-  });
-
+function finishLoading() {
+  loadingAll = false;
   pendingMinis = [];
 
   if (!document.hidden && prefs.motion && !isScrolling) {
-    minis.forEach(r => {
-      if (isVisible(r.cv)) r.start();
-    });
+    resumeVisibleMinis();
+  }
+}
+
+function loadNextBatch() {
+  if (!loadingAll) return;
+
+  // Never create renderers while the user is actively scrolling. This is what
+  // keeps scrolling smooth while the remaining previews are being prepared.
+  if (isScrolling || document.hidden) {
+    requestAnimationFrame(loadNextBatch);
+    return;
+  }
+
+  // A small batch spreads the expensive Renderer/scene initialization over
+  // multiple frames instead of blocking the browser with all worlds at once.
+  const batch = pendingMinis.splice(0, 2);
+
+  batch.forEach(item => initMini(item));
+
+  if (pendingMinis.length) {
+    requestAnimationFrame(loadNextBatch);
+  } else {
+    finishLoading();
   }
 }
 
@@ -74,15 +83,18 @@ function scheduleLoadAllMinis() {
   if (loadScheduled) return;
   loadScheduled = true;
 
-  // Let the Worlds DOM paint first. Initialization then happens immediately
-  // after that first paint rather than during route construction.
+  // Let the Worlds DOM paint first. Then prepare all worlds in small batches.
   requestAnimationFrame(() => {
-    setTimeout(loadAllMinis, 0);
+    requestAnimationFrame(() => {
+      loadScheduled = false;
+      loadingAll = true;
+      loadNextBatch();
+    });
   });
 }
 
 function resumeVisibleMinis() {
-  if (document.hidden || !prefs.motion) return;
+  if (document.hidden || !prefs.motion || isScrolling) return;
 
   minis.forEach(r => {
     if (isVisible(r.cv)) {
@@ -103,7 +115,13 @@ function pauseMinisForScroll() {
 
   scrollTimer = setTimeout(() => {
     isScrolling = false;
-    resumeVisibleMinis();
+
+    // Resume both animation and any unfinished preview preparation.
+    if (loadingAll) {
+      requestAnimationFrame(loadNextBatch);
+    } else {
+      resumeVisibleMinis();
+    }
   }, 150);
 }
 
@@ -114,13 +132,14 @@ export function resetMinis() {
   minis = [];
   pendingMinis = [];
   loadScheduled = false;
+  loadingAll = false;
 
   if (miniObs) {
     miniObs.disconnect();
   }
 
-  // Keep an observer only for visibility/scroll lifecycle. We no longer use
-  // it to lazy-create worlds because all previews are loaded after first paint.
+  // Visibility is only used to control animation after the previews exist.
+  // It no longer creates renderers during scrolling.
   miniObs = new IntersectionObserver(
     entries => {
       entries.forEach(e => {
@@ -163,7 +182,7 @@ export function mountMini(cv, key) {
 addEventListener(
   'scroll',
   () => {
-    if (!minis.length) return;
+    if (!minis.length && !loadingAll) return;
 
     pauseMinisForScroll();
   },
@@ -211,5 +230,9 @@ document.addEventListener('visibilitychange', () => {
     minis.forEach(r => miniObs.observe(r.cv));
   }
 
-  requestAnimationFrame(resumeVisibleMinis);
+  if (loadingAll) {
+    requestAnimationFrame(loadNextBatch);
+  } else {
+    requestAnimationFrame(resumeVisibleMinis);
+  }
 });
