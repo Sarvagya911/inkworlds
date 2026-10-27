@@ -70,15 +70,31 @@ export function wireGoogle() {
     if (!sessionStorage.getItem(AFTER))
       rememberDestination('#/library');
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: location.origin + location.pathname,
-        queryParams: {
-          prompt: 'select_account'
-        }
-      }
-    });
+    // const { error } = await supabase.auth.signInWithOAuth({
+    //   provider: 'google',
+    //   options: {
+    //     redirectTo: location.origin + location.pathname,
+    //     queryParams: {
+    //       prompt: 'select_account'
+    //     }
+    //   }
+    // });
+    const isNativeApp =
+  window.Capacitor?.isNativePlatform?.() === true;
+
+const redirectTo = isNativeApp
+  ? 'com.sarvagya.inkworlds://auth/callback'
+  : location.origin + location.pathname;
+
+const { error } = await supabase.auth.signInWithOAuth({
+  provider: 'google',
+  options: {
+    redirectTo,
+    queryParams: {
+      prompt: 'select_account'
+    }
+  }
+});
 
     if (error) {
       err(friendly(error));

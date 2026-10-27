@@ -81,6 +81,7 @@ import './styles/index.css';
 import './reader/controls.js';
 import './reader/companion.js';
 
+
 import { addFile } from './app/books.js';
 import {
   renderAccountChip,
@@ -105,6 +106,7 @@ import {
 
 import { cur } from './reader/reader.js';
 import { session } from './services/session.js';
+import { initNativeApp } from './native/app.js';
 
 $('fileIn').addEventListener(
   'change',
@@ -233,6 +235,8 @@ onAuthChange(
 let started = false;
 
 (async () => {
+  await initNativeApp();
+  
   await initAuth();
 
   renderAccountChip();
