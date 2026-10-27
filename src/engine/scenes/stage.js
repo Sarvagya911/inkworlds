@@ -10,11 +10,12 @@ export let minis = [];
 export let miniObs = null;
 
 // Preview rendering is deliberately split into two priorities:
-// 1. visible cards are prepared first, one per frame;
-// 2. off-screen cards are prepared only during browser idle time.
+// 1. visible and nearby cards are prepared first, one per frame;
+// 2. farther off-screen cards are prepared only during browser idle time.
 //
-// This keeps Worlds responsive even as the gallery grows. In particular,
-// background preparation never competes with scrolling or the first animation.
+// The larger prefetch window prevents blank canvases when the user scrolls
+// farther down while still keeping the expensive canvas initialization away
+// from the critical scrolling path.
 let pendingMinis = [];
 let scrollTimer = null;
 let isScrolling = false;
@@ -30,6 +31,21 @@ function isVisible(cv) {
   return (
     rect.bottom > 0 &&
     rect.top < window.innerHeight &&
+    rect.right > 0 &&
+    rect.left < window.innerWidth
+  );
+}
+
+// Cards within roughly two viewport heights are treated as imminent. This is
+// intentionally separate from the animation observer: nearby cards can be
+// prepared without starting their animation loops.
+function isNearViewport(cv) {
+  const rect = cv.getBoundingClientRect();
+  const margin = Math.max(window.innerHeight * 2, 1200);
+
+  return (
+    rect.bottom > -margin &&
+    rect.top < window.innerHeight + margin &&
     rect.right > 0 &&
     rect.left < window.innerWidth
   );
@@ -130,7 +146,7 @@ function loadVisibleNext() {
     return;
   }
 
-  const item = pendingMinis.find(item => isVisible(item.cv));
+  const item = pendingMinis.find(item => isNearViewport(item.cv));
 
   if (!item) {
     finishVisibleLoading();
@@ -147,7 +163,8 @@ function scheduleVisibleLoad() {
   if (loadScheduled) return;
   loadScheduled = true;
 
-  // Let the Worlds DOM paint first. Then prepare only what the user can see.
+  // Let the Worlds DOM paint first. Then prepare what is visible or close to
+  // becoming visible, one renderer per frame.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       loadScheduled = false;
@@ -174,13 +191,32 @@ function loadBackgroundOne() {
     return;
   }
 
-  // Never spend an idle slot preparing a card that has become visible.
-  const item =
-    pendingMinis.find(item => !isVisible(item.cv)) || pendingMinis[0];
+  // Prefer the pending card closest to the viewport. This prevents the
+  // background queue from preparing distant cards while the next cards in
+  // the user's scroll path are still blank.
+  const item = pendingMinis.reduce((closest, candidate) => {
+    const closestRect = closest.cv.getBoundingClientRect();
+    const candidateRect = candidate.cv.getBoundingClientRect();
+    const viewportBottom = window.innerHeight;
 
-  if (isVisible(item.cv)) {
+    const distance = rect => {
+      if (rect.top > viewportBottom) return rect.top - viewportBottom;
+      if (rect.bottom < 0) return -rect.bottom;
+      return 0;
+    };
+
+    return distance(candidateRect) < distance(closestRect)
+      ? candidate
+      : closest;
+  });
+
+  // Never initialize a card that has become imminent while this idle task
+  // was waiting. The visible/near-visible scheduler gets priority instead.
+  if (isNearViewport(item.cv)) {
     backgroundLoadScheduled = false;
     backgroundIdleId = null;
+    loadingVisible = true;
+    requestAnimationFrame(loadVisibleNext);
     return;
   }
 
@@ -210,17 +246,17 @@ function scheduleBackgroundLoad() {
   if (typeof requestIdleCallback === 'function') {
     backgroundIdleId = requestIdleCallback(
       () => loadBackgroundOne(),
-      { timeout: 1000 }
+      { timeout: 2000 }
     );
   } else {
-    backgroundIdleId = setTimeout(() => loadBackgroundOne(), 120);
+    backgroundIdleId = setTimeout(() => loadBackgroundOne(), 160);
   }
 }
 
 function resumePendingVisible() {
   if (isScrolling || document.hidden) return;
 
-  const visiblePending = pendingMinis.filter(item => isVisible(item.cv));
+  const visiblePending = pendingMinis.filter(item => isNearViewport(item.cv));
 
   if (!visiblePending.length) {
     scheduleBackgroundLoad();
@@ -244,8 +280,8 @@ function pauseMinisForScroll() {
   scrollTimer = setTimeout(() => {
     isScrolling = false;
 
-    // If a newly revealed card has not been prepared yet, prepare it first.
-    // Only after that do we return to low-priority background preparation.
+    // Prepare the current and nearby cards first. Only after that do we return
+    // to low-priority background preparation.
     resumePendingVisible();
     startVisibleMinisSmoothly();
   }, 150);
