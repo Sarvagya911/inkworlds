@@ -9,14 +9,19 @@ export const Main = new Renderer(document.getElementById('scene'), {
 export let minis = [];
 export let miniObs = null;
 
-// Register all previews first so the Worlds route can paint immediately.
-// Renderer setup is deliberately spread across frames so adding more worlds
-// increases background preparation time, not the cost of opening the page.
+// Preview rendering is deliberately split into two priorities:
+// 1. visible cards are prepared first, one per frame;
+// 2. off-screen cards are prepared only during browser idle time.
+//
+// This keeps Worlds responsive even as the gallery grows. In particular,
+// background preparation never competes with scrolling or the first animation.
 let pendingMinis = [];
 let scrollTimer = null;
 let isScrolling = false;
 let loadScheduled = false;
-let loadingAll = false;
+let loadingVisible = false;
+let backgroundLoadScheduled = false;
+let backgroundIdleId = null;
 let animationStartScheduled = false;
 
 function isVisible(cv) {
@@ -30,6 +35,20 @@ function isVisible(cv) {
   );
 }
 
+function cancelBackgroundLoad() {
+  if (backgroundIdleId !== null) {
+    if (typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(backgroundIdleId);
+    } else {
+      clearTimeout(backgroundIdleId);
+    }
+
+    backgroundIdleId = null;
+  }
+
+  backgroundLoadScheduled = false;
+}
+
 function initMini(item) {
   if (item.r) return item.r;
 
@@ -41,16 +60,25 @@ function initMini(item) {
   item.r = r;
   item.cv._r = r;
 
-  r.set(item.key);
+  /*
+   * Renderer.set() intentionally performs 14 warm-up frames for the main
+   * reader. That is useful for the full-size scene, but doing 14 expensive
+   * frames for every gallery card creates a startup spike.
+   *
+   * A gallery preview only needs one settled frame before animation starts.
+   * Initialize the renderer directly and draw exactly once.
+   */
+  r.name = item.key;
+  r.rain = [];
+  r.resize();
+  r.t = 6;
+  r.frame(0);
   r.stop();
 
   minis.push(r);
   return r;
 }
 
-// Start only the previews currently on screen, one per frame. This makes the
-// first animation appear quickly without creating a burst when the gallery
-// becomes active, and the cost stays bounded by the number of visible cards.
 function startVisibleMinisSmoothly() {
   if (
     animationStartScheduled ||
@@ -61,97 +89,152 @@ function startVisibleMinisSmoothly() {
     return;
   }
 
-  const visible = minis.filter(r => isVisible(r.cv) && !r.running);
-  if (!visible.length) return;
-
   animationStartScheduled = true;
+
+  const visible = minis.filter(r => isVisible(r.cv));
   let index = 0;
 
-  const startNext = () => {
-    if (document.hidden || !prefs.motion || isScrolling) {
+  const startOne = () => {
+    if (
+      document.hidden ||
+      !prefs.motion ||
+      isScrolling
+    ) {
       animationStartScheduled = false;
       return;
     }
 
-    // One renderer per frame keeps animation startup below the frame budget
-    // even when the gallery contains many animated worlds.
-    const renderer = visible[index++];
-    if (renderer && !renderer.running) {
-      renderer.start();
-    }
+    const r = visible[index++];
+    if (r) r.start();
 
     if (index < visible.length) {
-      requestAnimationFrame(startNext);
+      requestAnimationFrame(startOne);
     } else {
       animationStartScheduled = false;
     }
   };
 
-  requestAnimationFrame(startNext);
+  requestAnimationFrame(startOne);
 }
 
-function finishLoading() {
-  loadingAll = false;
-  pendingMinis = [];
-
-  // Give the final initialization paint its own frame before animation work.
-  requestAnimationFrame(() => {
-    requestAnimationFrame(startVisibleMinisSmoothly);
-  });
+function finishVisibleLoading() {
+  loadingVisible = false;
+  startVisibleMinisSmoothly();
+  scheduleBackgroundLoad();
 }
 
-function loadNextBatch() {
-  if (!loadingAll) return;
+function loadVisibleNext() {
+  if (!loadingVisible) return;
 
-  // Never create renderers while the user is actively scrolling. This is what
-  // keeps scrolling smooth while the remaining previews are being prepared.
   if (isScrolling || document.hidden) {
-    requestAnimationFrame(loadNextBatch);
     return;
   }
 
-  // One renderer per frame is intentional. It makes adding a new world cheap
-  // for the currently visible part of the gallery instead of producing a
-  // larger and larger startup spike.
-  const item = pendingMinis.shift();
-  if (item) {
-    initMini(item);
+  const item = pendingMinis.find(item => isVisible(item.cv));
+
+  if (!item) {
+    finishVisibleLoading();
+    return;
   }
 
-  // Once the first visible renderer exists, begin its animation independently
-  // of the remaining background preparation. Only visible renderers animate.
-  startVisibleMinisSmoothly();
+  pendingMinis = pendingMinis.filter(candidate => candidate !== item);
+  initMini(item);
 
-  if (pendingMinis.length) {
-    requestAnimationFrame(loadNextBatch);
-  } else {
-    finishLoading();
-  }
+  requestAnimationFrame(loadVisibleNext);
 }
 
-function scheduleLoadAllMinis() {
+function scheduleVisibleLoad() {
   if (loadScheduled) return;
   loadScheduled = true;
 
-  // Let the Worlds DOM paint first. Then prepare all worlds one at a time.
+  // Let the Worlds DOM paint first. Then prepare only what the user can see.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       loadScheduled = false;
-      loadingAll = true;
-      loadNextBatch();
+      loadingVisible = true;
+      loadVisibleNext();
     });
   });
 }
 
-function resumeVisibleMinis() {
-  if (document.hidden || !prefs.motion || isScrolling) return;
+function finishBackgroundLoad() {
+  backgroundLoadScheduled = false;
+  backgroundIdleId = null;
+}
 
-  startVisibleMinisSmoothly();
+function loadBackgroundOne() {
+  if (
+    document.hidden ||
+    isScrolling ||
+    loadingVisible ||
+    !pendingMinis.length
+  ) {
+    backgroundLoadScheduled = false;
+    backgroundIdleId = null;
+    return;
+  }
+
+  // Never spend an idle slot preparing a card that has become visible.
+  const item =
+    pendingMinis.find(item => !isVisible(item.cv)) || pendingMinis[0];
+
+  if (isVisible(item.cv)) {
+    backgroundLoadScheduled = false;
+    backgroundIdleId = null;
+    return;
+  }
+
+  pendingMinis = pendingMinis.filter(candidate => candidate !== item);
+  initMini(item);
+
+  if (pendingMinis.length) {
+    scheduleBackgroundLoad();
+  } else {
+    finishBackgroundLoad();
+  }
+}
+
+function scheduleBackgroundLoad() {
+  if (
+    backgroundLoadScheduled ||
+    document.hidden ||
+    isScrolling ||
+    loadingVisible ||
+    !pendingMinis.length
+  ) {
+    return;
+  }
+
+  backgroundLoadScheduled = true;
+
+  if (typeof requestIdleCallback === 'function') {
+    backgroundIdleId = requestIdleCallback(
+      () => loadBackgroundOne(),
+      { timeout: 1000 }
+    );
+  } else {
+    backgroundIdleId = setTimeout(() => loadBackgroundOne(), 120);
+  }
+}
+
+function resumePendingVisible() {
+  if (isScrolling || document.hidden) return;
+
+  const visiblePending = pendingMinis.filter(item => isVisible(item.cv));
+
+  if (!visiblePending.length) {
+    scheduleBackgroundLoad();
+    return;
+  }
+
+  loadingVisible = true;
+  requestAnimationFrame(loadVisibleNext);
 }
 
 function pauseMinisForScroll() {
   isScrolling = true;
   animationStartScheduled = false;
+  cancelBackgroundLoad();
 
   // Pause every loaded preview immediately while the user scrolls.
   minis.forEach(r => r.stop());
@@ -161,12 +244,10 @@ function pauseMinisForScroll() {
   scrollTimer = setTimeout(() => {
     isScrolling = false;
 
-    // Resume both animation and any unfinished preview preparation.
-    if (loadingAll) {
-      requestAnimationFrame(loadNextBatch);
-    } else {
-      resumeVisibleMinis();
-    }
+    // If a newly revealed card has not been prepared yet, prepare it first.
+    // Only after that do we return to low-priority background preparation.
+    resumePendingVisible();
+    startVisibleMinisSmoothly();
   }, 150);
 }
 
@@ -177,29 +258,31 @@ export function resetMinis() {
   minis = [];
   pendingMinis = [];
   loadScheduled = false;
-  loadingAll = false;
+  loadingVisible = false;
+  backgroundLoadScheduled = false;
+  backgroundIdleId = null;
   animationStartScheduled = false;
 
   if (miniObs) {
     miniObs.disconnect();
   }
 
-  // Visibility is only used to control animation after a renderer exists.
-  // It never creates renderers during scrolling or initial page load.
+  // Visibility controls animation only. Renderer creation is handled by the
+  // visible-first / idle scheduler above, never by the observer itself.
   miniObs = new IntersectionObserver(
     entries => {
       entries.forEach(e => {
         const item = e.target._mini;
         if (!item?.r) return;
 
-        // Initial loading has its own scheduler. Prevent the observer from
-        // starting several visible renderers at the same time and undoing the
-        // smooth startup above.
-        if (loadingAll || animationStartScheduled) return;
-
         if (e.isIntersecting) {
-          if (!isScrolling && !document.hidden && prefs.motion) {
-            startVisibleMinisSmoothly();
+          if (
+            !isScrolling &&
+            !document.hidden &&
+            prefs.motion &&
+            !loadingVisible
+          ) {
+            item.r.start();
           }
         } else {
           item.r.stop();
@@ -219,7 +302,7 @@ export function mountMini(cv, key) {
   pendingMinis.push(item);
   miniObs.observe(cv);
 
-  scheduleLoadAllMinis();
+  scheduleVisibleLoad();
 
   return item;
 }
@@ -228,12 +311,13 @@ export function mountMini(cv, key) {
  * IMPORTANT:
  * Pause canvas animation during scrolling.
  *
- * This is the main fix for scroll stuttering.
+ * This is the main fix for scroll stuttering. Background initialization is
+ * also cancelled so a newly started scroll gets the main thread to itself.
  */
 addEventListener(
   'scroll',
   () => {
-    if (!minis.length && !loadingAll) return;
+    if (!minis.length && !pendingMinis.length && !loadingVisible) return;
 
     pauseMinisForScroll();
   },
@@ -260,16 +344,18 @@ addEventListener('resize', () => {
   });
 
   if (!isScrolling) {
-    requestAnimationFrame(resumeVisibleMinis);
+    requestAnimationFrame(() => {
+      resumePendingVisible();
+      startVisibleMinisSmoothly();
+    });
   }
 });
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     Main.stop();
-
     minis.forEach(r => r.stop());
-
+    cancelBackgroundLoad();
     return;
   }
 
@@ -281,9 +367,9 @@ document.addEventListener('visibilitychange', () => {
     minis.forEach(r => miniObs.observe(r.cv));
   }
 
-  if (loadingAll) {
-    requestAnimationFrame(loadNextBatch);
-  } else {
-    requestAnimationFrame(resumeVisibleMinis);
-  }
+  requestAnimationFrame(() => {
+    resumePendingVisible();
+    startVisibleMinisSmoothly();
+    scheduleBackgroundLoad();
+  });
 });
