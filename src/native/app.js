@@ -87,8 +87,13 @@ async function handleOAuthUrl(rawUrl) {
  * --------------------------------------------------------- */
 
 function isPanelOpen() {
+  const drawer = document.getElementById('drawer');
+
+  if (drawer?.classList.contains('open')) {
+    return true;
+  }
+
   const ids = [
-    'drawer',
     'sheet',
     'comp',
     'pcSheet'
@@ -104,7 +109,7 @@ function isPanelOpen() {
 function goBack() {
   const hash = location.hash || '#/';
 
-  // Close an actually open overlay first.
+  // Close an actually open reader overlay first.
   if (isPanelOpen()) {
     closePanels();
     return;
@@ -112,6 +117,7 @@ function goBack() {
 
   // Close text-selection popup.
   const selpop = document.getElementById('selpop');
+
   if (selpop && !selpop.hidden) {
     hideSelPop();
     return;
@@ -128,28 +134,25 @@ function goBack() {
     hash === '#/stats' ||
     hash === '#/library'
   ) {
-    location.hash = '#/';
+    history.back();
     return;
   }
 
   // Book page.
   if (/^#\/book\/[^/]+/.test(hash)) {
-    location.hash = '#/library';
+    history.back();
     return;
   }
 
   // Community post.
   if (/^#\/c\/[^/]+\/p\/[^/]+/.test(hash)) {
-    const match = hash.match(/^#\/c\/([^/]+)\/p\/[^/]+/);
-    if (match) {
-      location.hash = '#/c/' + match[1];
-      return;
-    }
+    history.back();
+    return;
   }
 
   // Community.
   if (/^#\/c\/[^/]+$/.test(hash)) {
-    location.hash = '#/communities';
+    history.back();
     return;
   }
 
@@ -162,23 +165,18 @@ function goBack() {
     hash === '#/forgot' ||
     hash === '#/reset'
   ) {
-    location.hash = '#/';
+    history.back();
     return;
   }
 
-  // If we're inside a book reader, return to the book page.
+  // If we're inside a book reader, return to the previous route.
   if (cur) {
-    const id = cur?.meta?.id;
-    if (id) {
-      location.hash = '#/book/' + encodeURIComponent(id);
-    } else {
-      location.hash = '#/library';
-    }
+    history.back();
     return;
   }
 
-  // Already on home — exit Android app.
-  App.exitApp();
+  // At the root — show the themed exit confirmation.
+  showExitConfirmation();
 }
 
 
