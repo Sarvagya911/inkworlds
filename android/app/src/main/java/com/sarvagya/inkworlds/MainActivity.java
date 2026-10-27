@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 
 import androidx.core.splashscreen.SplashScreen;
 
@@ -17,36 +18,58 @@ public class MainActivity extends BridgeActivity {
 
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
 
-        // Keep the branded splash visible briefly so the animation feels intentional
-        // rather than disappearing immediately on fast devices.
         splashScreen.setKeepOnScreenCondition(
-            () -> SystemClock.uptimeMillis() - splashStart < 350
+            () -> SystemClock.uptimeMillis() - splashStart < 300
         );
 
         splashScreen.setOnExitAnimationListener(splashView -> {
             View icon = splashView.getIconView();
 
-            if (icon != null) {
-                icon.setAlpha(1f);
-                icon.setScaleX(0.82f);
-                icon.setScaleY(0.82f);
-
-                icon.animate()
-                    .scaleX(1.08f)
-                    .scaleY(1.08f)
-                    .alpha(0f)
-                    .setDuration(600)
-                    .setInterpolator(new AccelerateDecelerateInterpolator())
-                    .withEndAction(splashView::remove)
-                    .start();
-            } else {
+            if (icon == null) {
                 splashView.getView()
                     .animate()
                     .alpha(0f)
-                    .setDuration(450)
+                    .setDuration(350)
                     .withEndAction(splashView::remove)
                     .start();
+                return;
             }
+
+            icon.setAlpha(0f);
+            icon.setScaleX(0.72f);
+            icon.setScaleY(0.72f);
+
+            icon.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(420)
+                .setInterpolator(new OvershootInterpolator(1.15f))
+                .withEndAction(() ->
+                    icon.animate()
+                        .scaleX(1.055f)
+                        .scaleY(1.055f)
+                        .setDuration(160)
+                        .setInterpolator(new AccelerateDecelerateInterpolator())
+                        .withEndAction(() ->
+                            icon.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(180)
+                                .setInterpolator(new AccelerateDecelerateInterpolator())
+                                .withEndAction(() ->
+                                    icon.animate()
+                                        .alpha(0f)
+                                        .setDuration(300)
+                                        .setInterpolator(new AccelerateDecelerateInterpolator())
+                                        .withEndAction(splashView::remove)
+                                        .start()
+                                )
+                                .start()
+                        )
+                        .start()
+                )
+                .start();
         });
 
         super.onCreate(savedInstanceState);
