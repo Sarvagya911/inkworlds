@@ -1,62 +1,3 @@
-// // The full-screen reader background and the small animated previews.
-// import { Renderer } from './renderer.js';
-// import { prefs } from '../../lib/utils.js';
-
-// export const Main = new Renderer(document.getElementById('scene'), { full: true });
-
-// export let minis = [],
-//   miniObs = null;
-
-// export function resetMinis() {
-//   minis.forEach(r => r.stop());
-//   minis = [];
-//   if (miniObs) miniObs.disconnect();
-//   miniObs = new IntersectionObserver(
-//     es =>
-//       es.forEach(e => {
-//         const r = e.target._r;
-//         if (!r) return;
-//         if (e.isIntersecting && prefs.motion && !document.hidden) r.start();
-//         else r.stop();
-//       }),
-//     { threshold: 0.05 }
-//   );
-// }
-
-// export function mountMini(cv, key) {
-//   const r = new Renderer(cv, { maxDpr: 1.25, interval: 40 });
-//   cv._r = r;
-//   r.set(key);
-//   minis.push(r);
-//   miniObs.observe(cv);
-//   return r;
-// }
-
-// addEventListener('resize', () => {
-//   if (Main.name) {
-//     Main.resize();
-//     if (!Main.running) Main.frame(0);
-//   }
-//   minis.forEach(r => {
-//     r.resize();
-//     if (!r.running) r.frame(0);
-//   });
-// });
-
-// document.addEventListener('visibilitychange', () => {
-//   if (document.hidden) {
-//     Main.stop();
-//     minis.forEach(r => r.stop());
-//   } else {
-//     if (Main.name && prefs.motion) Main.start();
-//     if (miniObs) {
-//       const cvs = minis.map(r => r.cv);
-//       miniObs.disconnect();
-//       cvs.forEach(c => miniObs.observe(c));
-//     }
-//   }
-// });
-
 // The full-screen reader background and the small animated previews.
 import { Renderer } from './renderer.js';
 import { prefs } from '../../lib/utils.js';
@@ -68,6 +9,9 @@ export const Main = new Renderer(document.getElementById('scene'), {
 export let minis = [];
 export let miniObs = null;
 
+// World previews are registered first and only create a Renderer when they
+// are close to the viewport. This keeps the Worlds page responsive on mobile.
+let pendingMinis = [];
 let scrollTimer = null;
 let isScrolling = false;
 
@@ -80,6 +24,26 @@ function isVisible(cv) {
     rect.right > 0 &&
     rect.left < window.innerWidth
   );
+}
+
+function initMini(item) {
+  if (item.r) return item.r;
+
+  const r = new Renderer(item.cv, {
+    maxDpr: 1,
+    interval: 40
+  });
+
+  item.r = r;
+  item.cv._r = r;
+
+  // This is the expensive part. It now happens only for previews that are
+  // visible (or close to visible), instead of all worlds during navigation.
+  r.set(item.key);
+  r.stop();
+
+  minis.push(r);
+  return r;
 }
 
 function resumeVisibleMinis() {
@@ -113,6 +77,7 @@ resetMinis();
 export function resetMinis() {
   minis.forEach(r => r.stop());
   minis = [];
+  pendingMinis = [];
 
   if (miniObs) {
     miniObs.disconnect();
@@ -120,48 +85,39 @@ export function resetMinis() {
 
   miniObs = new IntersectionObserver(
     entries => {
-      // Never restart animation while the user is actively scrolling.
-      if (isScrolling || document.hidden || !prefs.motion) {
-        entries.forEach(e => e.target._r?.stop());
-        return;
-      }
-
       entries.forEach(e => {
-        const r = e.target._r;
+        const item = e.target._mini;
+        if (!item) return;
 
-        if (!r) return;
-
+        // Initialize only previews that enter the viewport or its preload
+        // margin. If motion is disabled/scrolling, initialize but don't run.
         if (e.isIntersecting) {
-          r.start();
-        } else {
-          r.stop();
+          const r = initMini(item);
+
+          if (isScrolling || document.hidden || !prefs.motion) {
+            r.stop();
+          } else {
+            r.start();
+          }
+        } else if (item.r) {
+          item.r.stop();
         }
       });
     },
     {
-      threshold: 0.05
+      threshold: 0.05,
+      rootMargin: '300px 0px'
     }
   );
 }
 
 export function mountMini(cv, key) {
-  const r = new Renderer(cv, {
-    maxDpr: 1,
-    interval: 40
-  });
-
-  cv._r = r;
-
-  r.set(key);
-
-  // Don't start it immediately.
-  // IntersectionObserver decides whether it's visible.
-  r.stop();
-
-  minis.push(r);
+  const item = { cv, key, r: null };
+  cv._mini = item;
+  pendingMinis.push(item);
   miniObs.observe(cv);
 
-  return r;
+  return item;
 }
 
 /*
@@ -219,7 +175,8 @@ document.addEventListener('visibilitychange', () => {
   }
 
   if (miniObs) {
-    const cvs = minis.map(r => r.cv);
+    const cvs = pendingMinis.map(item => item.cv);
+    minis.forEach(r => cvs.push(r.cv));
 
     miniObs.disconnect();
 
