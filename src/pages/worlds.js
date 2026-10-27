@@ -5,7 +5,10 @@ import { mountMini } from '../engine/scenes/stage.js';
 import { esc } from '../lib/utils.js';
 
 export function viewWorlds() {
-  ensureFonts(Object.values(THEMES).flatMap(t => [t.body, t.hand]));
+  // Let the page render first. Font preloading is useful, but doing all of it
+  // synchronously during navigation can delay the first paint on mobile.
+  const fonts = Object.values(THEMES).flatMap(t => [t.body, t.hand]);
+
   app.innerHTML = `<section class="view"><h1 class="page-title">Worlds</h1>
     <p class="lede">Every book is matched to one of these worlds. Each has its own living background, typefaces and handwriting, and you can switch any book to any world.</p>
     <div class="worlds">${Object.entries(THEMES)
@@ -20,5 +23,11 @@ export function viewWorlds() {
       <small>Titles in ${esc(t.title)}, text in ${esc(t.body)}, letters in ${esc(t.hand)}.</small></div></div></article>`
       )
       .join('')}</div></section>`;
-  app.querySelectorAll('canvas[data-w]').forEach(cv => mountMini(cv, cv.dataset.w));
+
+  // Preload fonts after navigation has had a chance to paint.
+  setTimeout(() => ensureFonts(fonts), 0);
+
+  app.querySelectorAll('canvas[data-w]').forEach(cv =>
+    mountMini(cv, cv.dataset.w)
+  );
 }
