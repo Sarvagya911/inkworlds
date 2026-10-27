@@ -17,6 +17,7 @@ let scrollTimer = null;
 let isScrolling = false;
 let loadScheduled = false;
 let loadingAll = false;
+let animationStartScheduled = false;
 
 function isVisible(cv) {
   const rect = cv.getBoundingClientRect();
@@ -47,13 +48,40 @@ function initMini(item) {
   return r;
 }
 
+function startVisibleMinisSmoothly() {
+  if (animationStartScheduled || document.hidden || !prefs.motion || isScrolling) {
+    return;
+  }
+
+  animationStartScheduled = true;
+
+  const visible = minis.filter(r => isVisible(r.cv));
+  let index = 0;
+
+  const startBatch = () => {
+    if (document.hidden || !prefs.motion || isScrolling) {
+      animationStartScheduled = false;
+      return;
+    }
+
+    const batch = visible.slice(index, index + 2);
+    batch.forEach(r => r.start());
+    index += batch.length;
+
+    if (index < visible.length) {
+      requestAnimationFrame(startBatch);
+    } else {
+      animationStartScheduled = false;
+    }
+  };
+
+  requestAnimationFrame(startBatch);
+}
+
 function finishLoading() {
   loadingAll = false;
   pendingMinis = [];
-
-  if (!document.hidden && prefs.motion && !isScrolling) {
-    resumeVisibleMinis();
-  }
+  startVisibleMinisSmoothly();
 }
 
 function loadNextBatch() {
@@ -96,17 +124,12 @@ function scheduleLoadAllMinis() {
 function resumeVisibleMinis() {
   if (document.hidden || !prefs.motion || isScrolling) return;
 
-  minis.forEach(r => {
-    if (isVisible(r.cv)) {
-      r.start();
-    } else {
-      r.stop();
-    }
-  });
+  startVisibleMinisSmoothly();
 }
 
 function pauseMinisForScroll() {
   isScrolling = true;
+  animationStartScheduled = false;
 
   // Pause every loaded preview immediately while the user scrolls.
   minis.forEach(r => r.stop());
@@ -133,6 +156,7 @@ export function resetMinis() {
   pendingMinis = [];
   loadScheduled = false;
   loadingAll = false;
+  animationStartScheduled = false;
 
   if (miniObs) {
     miniObs.disconnect();
