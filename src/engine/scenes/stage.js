@@ -10,8 +10,8 @@ export let minis = [];
 export let miniObs = null;
 
 // Register all previews first so the Worlds route can paint immediately.
-// After the first paint, initialize them in small batches. This keeps the
-// expensive setup out of navigation and avoids one large blocking task.
+// Renderer setup is deliberately spread across frames so adding more worlds
+// increases background preparation time, not the cost of opening the page.
 let pendingMinis = [];
 let scrollTimer = null;
 let isScrolling = false;
@@ -48,40 +48,56 @@ function initMini(item) {
   return r;
 }
 
+// Start only the previews currently on screen, one per frame. This makes the
+// first animation appear quickly without creating a burst when the gallery
+// becomes active, and the cost stays bounded by the number of visible cards.
 function startVisibleMinisSmoothly() {
-  if (animationStartScheduled || document.hidden || !prefs.motion || isScrolling) {
+  if (
+    animationStartScheduled ||
+    document.hidden ||
+    !prefs.motion ||
+    isScrolling
+  ) {
     return;
   }
 
-  animationStartScheduled = true;
+  const visible = minis.filter(r => isVisible(r.cv) && !r.running);
+  if (!visible.length) return;
 
-  const visible = minis.filter(r => isVisible(r.cv));
+  animationStartScheduled = true;
   let index = 0;
 
-  const startBatch = () => {
+  const startNext = () => {
     if (document.hidden || !prefs.motion || isScrolling) {
       animationStartScheduled = false;
       return;
     }
 
-    const batch = visible.slice(index, index + 2);
-    batch.forEach(r => r.start());
-    index += batch.length;
+    // One renderer per frame keeps animation startup below the frame budget
+    // even when the gallery contains many animated worlds.
+    const renderer = visible[index++];
+    if (renderer && !renderer.running) {
+      renderer.start();
+    }
 
     if (index < visible.length) {
-      requestAnimationFrame(startBatch);
+      requestAnimationFrame(startNext);
     } else {
       animationStartScheduled = false;
     }
   };
 
-  requestAnimationFrame(startBatch);
+  requestAnimationFrame(startNext);
 }
 
 function finishLoading() {
   loadingAll = false;
   pendingMinis = [];
-  startVisibleMinisSmoothly();
+
+  // Give the final initialization paint its own frame before animation work.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(startVisibleMinisSmoothly);
+  });
 }
 
 function loadNextBatch() {
@@ -94,11 +110,17 @@ function loadNextBatch() {
     return;
   }
 
-  // A small batch spreads the expensive Renderer/scene initialization over
-  // multiple frames instead of blocking the browser with all worlds at once.
-  const batch = pendingMinis.splice(0, 2);
+  // One renderer per frame is intentional. It makes adding a new world cheap
+  // for the currently visible part of the gallery instead of producing a
+  // larger and larger startup spike.
+  const item = pendingMinis.shift();
+  if (item) {
+    initMini(item);
+  }
 
-  batch.forEach(item => initMini(item));
+  // Once the first visible renderer exists, begin its animation independently
+  // of the remaining background preparation. Only visible renderers animate.
+  startVisibleMinisSmoothly();
 
   if (pendingMinis.length) {
     requestAnimationFrame(loadNextBatch);
@@ -111,7 +133,7 @@ function scheduleLoadAllMinis() {
   if (loadScheduled) return;
   loadScheduled = true;
 
-  // Let the Worlds DOM paint first. Then prepare all worlds in small batches.
+  // Let the Worlds DOM paint first. Then prepare all worlds one at a time.
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       loadScheduled = false;
@@ -162,17 +184,22 @@ export function resetMinis() {
     miniObs.disconnect();
   }
 
-  // Visibility is only used to control animation after the previews exist.
-  // It no longer creates renderers during scrolling.
+  // Visibility is only used to control animation after a renderer exists.
+  // It never creates renderers during scrolling or initial page load.
   miniObs = new IntersectionObserver(
     entries => {
       entries.forEach(e => {
         const item = e.target._mini;
         if (!item?.r) return;
 
+        // Initial loading has its own scheduler. Prevent the observer from
+        // starting several visible renderers at the same time and undoing the
+        // smooth startup above.
+        if (loadingAll || animationStartScheduled) return;
+
         if (e.isIntersecting) {
           if (!isScrolling && !document.hidden && prefs.motion) {
-            item.r.start();
+            startVisibleMinisSmoothly();
           }
         } else {
           item.r.stop();
