@@ -119,14 +119,11 @@ export function mountMini(cv, key) {
   pendingMinis.push(item);
   miniObs.observe(cv);
 
-  // IntersectionObserver can wait for its callback until after layout.
-  // For the previews already on screen, initialize on the very next frame so
-  // the page can paint first without leaving a noticeable blank canvas.
+  // The first visible previews should be ready before the browser paints the
+  // Worlds page. Only off-screen previews remain lazy, so we avoid the old
+  // cost of initializing every world during navigation.
   if (isVisible(cv)) {
-    requestAnimationFrame(() => {
-      if (item.r || !document.body.contains(cv)) return;
-      activateMini(item);
-    });
+    activateMini(item);
   }
 
   return item;
