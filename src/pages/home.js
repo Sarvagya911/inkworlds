@@ -62,21 +62,30 @@ export async function viewHome() {
         <div><h3>Reading stats</h3><p>Time read, streaks, words read and the worlds you spend the most time in, across all your devices.</p></div>
       </div></div>
   </section>`;
-  const cv = $('heroCv'),
-    r = mountMini(cv, keys[0]);
+
+  const cv = $('heroCv');
+  const item = mountMini(cv, keys[0]);
   let i = 0;
+
   const label = k => {
     const t = THEMES[k];
     $('heroName').textContent = t.name;
     $('heroName').style.fontFamily = fontStack(t.title, 'title');
     $('heroLine').textContent = t.best;
   };
+
   label(keys[0]);
+
   heroTimer = setInterval(() => {
     if (document.hidden) return;
+
+    const r = item.r;
+    if (!r) return;
+
     i = (i + 1) % keys.length;
     cv.style.opacity = 0;
     $('heroName').style.opacity = 0;
+
     setTimeout(() => {
       const was = r.running;
       r.stop();
