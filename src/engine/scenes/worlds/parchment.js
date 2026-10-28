@@ -6,6 +6,8 @@ import { R, clamp } from '../../../lib/utils.js';
 // villages and a lone tower are joined by curving roads. Footsteps travel the roads,
 // the river flows, a ship sails the coast, windmill sails turn, chimneys smoke,
 // flags fly, and now and then a road lights up in golden ink.
+// Wizarding layer: Hogwarts-style castle, Quidditch pitch, owls, snitch, ghosts, Patronus,
+// Marauder's-Map names beside the footprints.
 // init() pre-renders the parchment and the map; draw() animates one frame.
 
 const INK = '52,30,12';
@@ -38,6 +40,933 @@ const NAMES = {
   sea: ['The Sleeping Sea', 'Mermaid’s Reach', 'The Glass Water'],
   circle: ['The Old Stones']
 };
+
+// Wizarding-world layer for parchment.js: a grand castle, a Quidditch pitch, a Whomping-Willow-style
+// tree, a crooked shack, glowing eyes in the forest, then the living magic: owls, a golden snitch,
+// house-coloured broom riders, floating candles, ghosts, a Patronus stag, a lake tentacle,
+// and Marauder's-Map style names beside the walking footprints.
+
+const FONT = '"EB Garamond", "Cormorant Garamond", Georgia, serif';
+const OATH = 'I solemnly swear that I am up to no good';
+
+const HP = {
+  names: {
+    realm: ['Hogwarts and Environs'],
+    castle: ['Hogwarts'],
+    village: ['Brackenby', 'Thornwick', 'Owlsbridge', 'Fennmouth', 'Candlefold', 'Marrowdale', 'Little Wending', 'Hob’s End'],
+    port: ['Black Lake Landing'],
+    tower: ['The Astronomy Tower'],
+    wood: ['The Forbidden Forest', 'The Whispering Wood', 'Dark Hollow', 'The Tangle'],
+    mountains: ['The Highlands'],
+    sea: ['The Black Lake'],
+    circle: ['The Standing Stones']
+  },
+  subtitle: 'Surveyed by Wren and Fenn, cartographers of mischief',
+  people: ['Wren', 'Aldous Fenn', 'Tamsin Rook', 'Barnaby Quill', 'Odalys Finch', 'Peregrine Moss', 'Isolde Vane']
+};
+
+const HOUSES = ['170,40,35', '40,115,70', '50,85,165', '220,180,40']; // scarlet, green, blue, gold
+
+/* ------------------------------------------------------------------ helpers */
+const nearPts = (pts, x, y, d) =>
+  pts.some(p => Math.abs(p[0] - x) < d && Math.abs(p[1] - y) < d && Math.hypot(p[0] - x, p[1] - y) < d);
+
+/* ------------------------------------------------------------------ the castle (static ink) */
+function grandCastle(g, p, S, u, flags, lights) {
+  const x0 = p.x,
+    y0 = p.y + S * 0.5;
+  g.save();
+  g.lineWidth = Math.max(0.55, 0.85 * u);
+  g.strokeStyle = `rgba(${INK},.88)`;
+  g.lineJoin = 'round';
+
+  // Crag the castle sits on, hatched.
+  g.beginPath();
+  g.ellipse(x0, y0, S * 4.3, S * 1.0, 0, 0, Math.PI);
+  hide(g);
+  g.stroke();
+  g.beginPath();
+  for (let k = 0; k < 9; k++) {
+    const sx = x0 - S * 3.6 + k * S * 0.9;
+    g.moveTo(sx, y0 + S * 0.15);
+    g.lineTo(sx - S * 0.15, y0 + S * 0.7);
+  }
+  g.stroke();
+
+  // A covered bridge reaching out to the left.
+  const by = y0 + S * 0.1,
+    bl = x0 - S * 3.8,
+    br = x0 - S * 8;
+  g.beginPath();
+  g.rect(br, by - S * 0.4, bl - br, S * 0.4);
+  hide(g);
+  g.stroke();
+  g.beginPath();
+  for (let k = 0; k < 4; k++) {
+    const seg = (bl - br) / 4;
+    g.arc(br + seg * (k + 0.5), by, seg * 0.38, 0, Math.PI);
+  }
+  for (let x = br + S * 0.4; x < bl; x += S * 0.55) {
+    g.moveTo(x, by - S * 0.4);
+    g.lineTo(x, by);
+  }
+  g.stroke();
+
+  // x, width, height, roof height (all in units of S).
+  const tower = (xr, wr, hr, rr, opt = {}) => {
+    const x = x0 + xr * S,
+      w = wr * S,
+      h = hr * S,
+      top = y0 - h;
+    g.beginPath();
+    g.rect(x - w / 2, top, w, h);
+    hide(g);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x - w / 2 - w * 0.12, top);
+    g.lineTo(x + w / 2 + w * 0.12, top);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x - w / 2 - w * 0.18, top);
+    g.lineTo(x, top - rr * S);
+    g.lineTo(x + w / 2 + w * 0.18, top);
+    g.closePath();
+    hide(g);
+    g.fillStyle = `rgba(${INK},.32)`;
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x, top - rr * S);
+    g.lineTo(x, top - rr * S - S * 0.6);
+    g.stroke();
+    if (opt.flag) flags.push([x, top - rr * S - S * 0.6, S / 9]);
+    for (let k = 0; ; k++) {
+      const wy = top + S * (0.7 + k * 1.1);
+      if (wy + S * 0.4 > y0 - S * 1.6) break;
+      g.beginPath();
+      g.moveTo(x - w * 0.1, wy + S * 0.38);
+      g.lineTo(x - w * 0.1, wy);
+      g.arc(x, wy, w * 0.1, Math.PI, 0);
+      g.lineTo(x + w * 0.1, wy + S * 0.38);
+      g.stroke();
+      if (k % 2 === 0) lights.push([x, wy + S * 0.2, S * 0.5, opt.magic && k === 0]);
+    }
+  };
+  tower(0.3, 1.0, 4.6, 2.0, { flag: true, magic: true }); // the tall Astronomy-style tower
+  tower(-1.6, 0.9, 3.6, 1.6, { flag: true });
+  tower(1.9, 0.95, 3.2, 1.4, { flag: true });
+
+  // Curtain wall with battlements.
+  const wallH = S * 1.5,
+    wx = x0 - S * 3.5,
+    ww = S * 7;
+  g.beginPath();
+  g.rect(wx, y0 - wallH, ww, wallH);
+  hide(g);
+  g.stroke();
+  g.beginPath();
+  for (let k = 0; k < 15; k++) g.rect(wx + (k * ww) / 15, y0 - wallH - S * 0.2, (ww / 15) * 0.55, S * 0.2);
+  g.stroke();
+
+  // Gatehouse with portcullis.
+  const gx = x0 + S * 0.2,
+    gw = S * 1.5,
+    gh = S * 2.2;
+  g.beginPath();
+  g.rect(gx - gw / 2, y0 - gh, gw, gh);
+  hide(g);
+  g.stroke();
+  g.beginPath();
+  for (let k = 0; k < 4; k++) g.rect(gx - gw / 2 + k * gw * 0.28, y0 - gh - S * 0.22, gw * 0.2, S * 0.22);
+  g.moveTo(gx - gw * 0.22, y0);
+  g.lineTo(gx - gw * 0.22, y0 - gh * 0.45);
+  g.arc(gx, y0 - gh * 0.45, gw * 0.22, Math.PI, 0);
+  g.lineTo(gx + gw * 0.22, y0);
+  g.stroke();
+  g.beginPath();
+  for (let k = -1; k <= 1; k++) {
+    g.moveTo(gx + k * gw * 0.12, y0);
+    g.lineTo(gx + k * gw * 0.12, y0 - gh * 0.5);
+  }
+  g.stroke();
+
+  tower(-3.5, 0.85, 2.5, 1.1);
+  tower(3.6, 0.85, 2.3, 1.0, { flag: true });
+  g.restore();
+}
+
+/* ------------------------------------------------------------------ extra places (static ink) */
+function drawExtras(g, G, u, S, rand, woods, w, h) {
+  const W = w,
+    H = h,
+    m = 30 * u + 16;
+  const roadPts = G.roads.flatMap(r => r.path.pts);
+  const lw = Math.max(0.55, 0.85 * u);
+  const used = [];
+  g.save();
+  g.lineWidth = lw;
+  g.strokeStyle = `rgba(${INK},.85)`;
+  g.lineJoin = 'round';
+
+  // Finds open ground near (cx, cy), clear of places, roads, rivers and the coast.
+  const spot = (cx, cy, rMin, rMax, clear) => {
+    for (let k = 0; k < 120; k++) {
+      const a = rand() * TAU,
+        r = rMin + rand() * (rMax - rMin);
+      const x = cx + Math.cos(a) * r * 1.3,
+        y = cy + Math.sin(a) * r * 0.8;
+      if (x < m + clear || x > W - m - clear || y < m + clear || y > H - m - clear) continue;
+      const [qa, qb] = G.AB(x, y);
+      if (qb < G.coastB(qa) + 0.04 || qb > G.mtnB - 0.02) continue;
+      if (G.places.some(p => Math.hypot(p.x - x, p.y - y) < clear * 1.6)) continue;
+      if (used.some(q => Math.hypot(q[0] - x, q[1] - y) < clear * 1.6)) continue;
+      if (nearPts(roadPts, x, y, clear * 0.7) || nearPts(G.river, x, y, clear * 0.7)) continue;
+      if (G.trib.length && nearPts(G.trib, x, y, clear * 0.6)) continue;
+      used.push([x, y]);
+      return [x, y];
+    }
+    return null;
+  };
+
+  // Quidditch pitch: oval, stands, centre circle and three hoops at each end.
+  let pitch = null;
+  const pp = spot(G.castle.x, G.castle.y, S * 7, S * 13, S * 4);
+  if (pp) {
+    const [x, y] = pp,
+      rx = S * 3,
+      ry = S * 1.5;
+    pitch = { x, y, rx, ry };
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, 0, 0, TAU);
+    hide(g);
+    g.stroke();
+    g.beginPath();
+    g.ellipse(x, y, rx * 0.82, ry * 0.78, 0, 0, TAU);
+    g.moveTo(x, y - ry * 0.78);
+    g.lineTo(x, y + ry * 0.78);
+    g.moveTo(x + rx * 0.18, y);
+    g.ellipse(x, y, rx * 0.18, ry * 0.3, 0, 0, TAU);
+    g.stroke();
+    g.beginPath();
+    for (let k = 0; k < 32; k++) {
+      const a = (k * TAU) / 32;
+      g.moveTo(x + Math.cos(a) * rx, y + Math.sin(a) * ry);
+      g.lineTo(x + Math.cos(a) * rx * 1.13, y + Math.sin(a) * ry * 1.2);
+    }
+    for (const sx of [-1, 1])
+      for (const [dy, h] of [
+        [-0.45, 1.3],
+        [0, 1.8],
+        [0.45, 1.3]
+      ]) {
+        const hx = x + sx * rx * 0.82,
+          hy = y + dy * ry;
+        g.moveTo(hx, hy);
+        g.lineTo(hx, hy - S * h);
+        g.moveTo(hx + S * 0.22, hy - S * h - S * 0.28);
+        g.ellipse(hx, hy - S * h - S * 0.28, S * 0.22, S * 0.28, 0, 0, TAU);
+      }
+    g.stroke();
+  }
+
+  // A gnarled tree whose branches are animated in draw().
+  let willow = null;
+  const wp = spot(G.castle.x, G.castle.y, S * 5, S * 16, S * 3.5);
+  if (wp) {
+    const [x, y] = wp,
+      s = S * 1.2;
+    willow = { x, y, s };
+    g.beginPath();
+    g.moveTo(x - s * 0.45, y);
+    g.quadraticCurveTo(x - s * 0.2, y - s * 1.2, x - s * 0.3, y - s * 2.2);
+    g.lineTo(x + s * 0.3, y - s * 2.2);
+    g.quadraticCurveTo(x + s * 0.25, y - s * 1.2, x + s * 0.45, y);
+    g.closePath();
+    hide(g);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x - s * 0.45, y);
+    g.quadraticCurveTo(x - s * 0.9, y + s * 0.1, x - s * 1.1, y + s * 0.25);
+    g.moveTo(x + s * 0.45, y);
+    g.quadraticCurveTo(x + s * 0.9, y + s * 0.1, x + s * 1.1, y + s * 0.25);
+    g.moveTo(x - s * 0.12, y - s * 1.1);
+    g.arc(x - s * 0.12, y - s * 1.1, s * 0.1, 0, TAU);
+    g.stroke();
+  }
+
+  // A crooked, boarded-up shack on the edge of the first village.
+  let shack = null;
+  const v0 = G.places.find(p => p.kind === 'village');
+  const sp = v0 && spot(v0.x, v0.y, S * 4, S * 8, S * 2.5);
+  if (sp) {
+    const [x, y] = sp;
+    shack = { x, y };
+    g.save();
+    g.translate(x, y);
+    g.rotate(-0.07);
+    g.beginPath();
+    g.rect(-S * 0.8, -S * 0.9, S * 1.6, S * 0.9);
+    hide(g);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(-S * 0.95, -S * 0.9);
+    g.lineTo(-S * 0.1, -S * 1.55);
+    g.lineTo(S * 0.2, -S * 1.35);
+    g.lineTo(S * 0.95, -S * 0.9);
+    g.closePath();
+    hide(g);
+    g.fillStyle = `rgba(${INK},.25)`;
+    g.fill();
+    g.stroke();
+    g.beginPath();
+    g.rect(-S * 0.5, -S * 0.7, S * 0.4, S * 0.4);
+    g.moveTo(-S * 0.5, -S * 0.7);
+    g.lineTo(-S * 0.1, -S * 0.3);
+    g.moveTo(-S * 0.1, -S * 0.7);
+    g.lineTo(-S * 0.5, -S * 0.3);
+    for (let k = 0; k < 5; k++) {
+      g.moveTo(S * (0.2 + k * 0.17), 0);
+      g.lineTo(S * (0.2 + k * 0.17), -S * 0.35);
+    }
+    g.stroke();
+    g.restore();
+  }
+
+  // Pairs of eyes that blink open in the forest.
+  const eyes = [];
+  for (const wd of woods)
+    for (let k = 0; k < 3; k++) {
+      const a = rand() * TAU,
+        r = Math.sqrt(rand()) * wd.r * 0.7;
+      eyes.push({
+        x: wd.x + Math.cos(a) * r * 1.2,
+        y: wd.y + Math.sin(a) * r * 0.7,
+        sp: 1.3 * u + 1.5,
+        ph: rand() * TAU
+      });
+    }
+  // Faint filler across the whole page (it shows through behind the text, so it stays light):
+  // grass tufts, small hills and trees, star charts, and a dotted treasure trail ending in an X.
+  {
+    const d0 = 20 * u + 8,
+      cap = Math.min(520, Math.floor((W * H) / (d0 * d0 * 2.2))),
+      pts = [];
+    for (let k = 0; k < cap * 4 && pts.length < cap; k++) {
+      const x = m + rand() * (W - 2 * m),
+        y = m + rand() * (H - 2 * m),
+        [qa, qb] = G.AB(x, y);
+      if (qb < G.coastB(qa) + 0.025 || qb > G.mtnB - 0.01) continue;
+      if (pts.some(q => Math.hypot(q[0] - x, q[1] - y) < d0)) continue;
+      if (G.places.some(p => Math.hypot(p.x - x, p.y - y) < S * 4.5)) continue;
+      if (used.some(q => Math.hypot(q[0] - x, q[1] - y) < S * 5)) continue;
+      if (woods.some(wd => Math.hypot((wd.x - x) / 1.3, (wd.y - y) / 0.8) < wd.r * 1.05)) continue;
+      if (nearPts(roadPts, x, y, 7 * u + 3) || nearPts(G.river, x, y, 9 * u + 4)) continue;
+      if (G.trib.length && nearPts(G.trib, x, y, 6 * u + 3)) continue;
+      pts.push([x, y]);
+    }
+    g.lineCap = 'round';
+    for (const [x, y] of pts) {
+      const r = rand();
+      g.strokeStyle = `rgba(${INK},${0.3 + rand() * 0.15})`;
+      g.lineWidth = Math.max(0.45, 0.65 * u);
+      if (r < 0.45) {
+        const t0 = (3 + rand() * 2) * u + 1.5;
+        g.beginPath();
+        for (const dx of [-1, 0, 1]) {
+          g.moveTo(x + dx * t0 * 0.5, y);
+          g.quadraticCurveTo(x + dx * t0 * 0.6, y - t0 * 0.7, x + dx * t0 * 0.9, y - t0 * (1.1 - Math.abs(dx) * 0.3));
+        }
+        g.stroke();
+      } else if (r < 0.7) hill(g, x, y, (5 + rand() * 4) * u + 2.5, u);
+      else if (r < 0.88) (rand() < 0.5 ? broadleaf : conifer)(g, x, y, (4.5 + rand() * 2) * u + 2);
+      else {
+        g.beginPath();
+        g.arc(x, y, (1.6 + rand()) * u + 1, Math.PI, TAU);
+        g.arc(x + 3 * u + 2, y + 1, (1.2 + rand()) * u + 0.8, Math.PI, TAU);
+        g.stroke();
+      }
+    }
+    const land = (x0, x1) => {
+      for (let k = 0; k < 60; k++) {
+        const x = W * (x0 + rand() * (x1 - x0)),
+          y = m + rand() * (H - 2 * m),
+          [qa, qb] = G.AB(x, y);
+        if (qb > G.coastB(qa) + 0.05 && qb < G.mtnB - 0.03 && !G.places.some(p => Math.hypot(p.x - x, p.y - y) < S * 3))
+          return [x, y];
+      }
+      return null;
+    };
+    // Star charts.
+    g.fillStyle = `rgba(${INK},.4)`;
+    g.strokeStyle = `rgba(${INK},.3)`;
+    g.lineWidth = Math.max(0.4, 0.55 * u);
+    for (let k = 0; k < 3; k++) {
+      const p0 = land(0.08, 0.92);
+      if (!p0) continue;
+      let [px, py] = p0;
+      const st = [[px, py]];
+      for (let i = 0; i < 5 + Math.floor(rand() * 3); i++) {
+        px += (rand() - 0.35) * ((26 + rand() * 18) * u + 10);
+        py += (rand() - 0.5) * ((26 + rand() * 18) * u + 10);
+        st.push([px, py]);
+      }
+      g.setLineDash([1.5 * u + 1, 3 * u + 2]);
+      g.beginPath();
+      polyPath(g, st);
+      g.stroke();
+      g.setLineDash([]);
+      for (const [x, y] of st) {
+        const r = (2.2 + rand() * 1.6) * u + 1.2;
+        g.beginPath();
+        g.moveTo(x, y - r);
+        g.quadraticCurveTo(x + r * 0.15, y - r * 0.15, x + r, y);
+        g.quadraticCurveTo(x + r * 0.15, y + r * 0.15, x, y + r);
+        g.quadraticCurveTo(x - r * 0.15, y + r * 0.15, x - r, y);
+        g.quadraticCurveTo(x - r * 0.15, y - r * 0.15, x, y - r);
+        g.fill();
+      }
+    }
+    // Treasure trail.
+    const a0 = land(0.25, 0.45),
+      a1 = land(0.55, 0.75);
+    if (a0 && a1) {
+      const ctrl = [a0];
+      for (let k = 1; k < 4; k++) {
+        const t0 = k / 4;
+        ctrl.push([a0[0] + (a1[0] - a0[0]) * t0 + (rand() - 0.5) * H * 0.18, a0[1] + (a1[1] - a0[1]) * t0 + (rand() - 0.5) * H * 0.18]);
+      }
+      ctrl.push(a1);
+      g.strokeStyle = `rgba(${INK},.38)`;
+      g.lineWidth = Math.max(0.5, 0.8 * u);
+      g.setLineDash([1.2 * u + 0.8, 4 * u + 3]);
+      g.beginPath();
+      polyPath(g, spline(ctrl, 12));
+      g.stroke();
+      g.setLineDash([]);
+      const xs = 4 * u + 3;
+      g.lineWidth = Math.max(0.8, 1.3 * u);
+      g.strokeStyle = `rgba(150,40,25,.55)`;
+      g.beginPath();
+      g.moveTo(a1[0] - xs, a1[1] - xs);
+      g.lineTo(a1[0] + xs, a1[1] + xs);
+      g.moveTo(a1[0] + xs, a1[1] - xs);
+      g.lineTo(a1[0] - xs, a1[1] + xs);
+      g.stroke();
+    }
+  }
+  g.restore();
+  return { pitch, willow, shack, eyes };
+}
+
+/* ------------------------------------------------------------------ animated figures */
+function owl(c, x, y, ang, s, t, a) {
+  c.save();
+  c.translate(x, y);
+  c.rotate(ang);
+  c.globalAlpha = a;
+  const fl = Math.sin(t * 11) * 0.9;
+  c.fillStyle = `rgba(${INK},.88)`;
+  for (const sd of [-1, 1]) {
+    c.beginPath();
+    c.moveTo(s * 0.1, sd * s * 0.25);
+    c.quadraticCurveTo(-s * 0.2, sd * s * (1.1 + fl * 0.2), -s * 0.9, sd * s * (1.5 + fl * 0.9));
+    c.quadraticCurveTo(-s * 0.5, sd * s * (0.6 + fl * 0.2), -s * 0.7, sd * s * 0.2);
+    c.closePath();
+    c.fill();
+  }
+  c.beginPath();
+  c.ellipse(-s * 0.2, 0, s * 0.85, s * 0.34, 0, 0, TAU);
+  c.fill();
+  c.beginPath();
+  c.arc(s * 0.7, 0, s * 0.3, 0, TAU);
+  c.fill();
+  c.beginPath();
+  c.moveTo(-s * 0.95, -s * 0.2);
+  c.lineTo(-s * 1.5, 0);
+  c.lineTo(-s * 0.95, s * 0.2);
+  c.fill();
+  c.restore();
+}
+function rider(c, x, y, dx, dy, s, col, t) {
+  const dir = dx >= 0 ? 1 : -1;
+  c.save();
+  c.translate(x, y);
+  c.scale(dir, 1);
+  c.rotate(Math.atan2(dy, Math.abs(dx)) * 0.5);
+  c.strokeStyle = `rgba(${INK},.9)`;
+  c.lineWidth = Math.max(0.6, s * 0.22);
+  c.beginPath();
+  c.moveTo(-s * 1.1, 0);
+  c.lineTo(s * 1.2, 0);
+  c.stroke();
+  c.fillStyle = `rgba(${INK},.8)`;
+  c.beginPath();
+  c.moveTo(-s * 1.1, 0);
+  c.lineTo(-s * 1.9, -s * 0.3);
+  c.lineTo(-s * 1.9, s * 0.3);
+  c.closePath();
+  c.fill();
+  c.fillStyle = `rgba(${col},.92)`;
+  c.beginPath();
+  c.moveTo(s * 0.15, -s * 0.8);
+  c.lineTo(-s * 1.1, -s * 0.5 + Math.sin(t * 14) * s * 0.12);
+  c.lineTo(s * 0.0, -s * 0.15);
+  c.closePath();
+  c.fill();
+  c.fillStyle = `rgba(${INK},.85)`;
+  c.beginPath();
+  c.arc(s * 0.35, -s * 0.95, s * 0.32, 0, TAU);
+  c.fill();
+  c.restore();
+}
+function stag(c, x, y, dir, s, t, a) {
+  c.save();
+  c.translate(x, y);
+  c.scale(dir, 1);
+  c.globalAlpha = a;
+  c.fillStyle = 'rgba(246,252,255,.96)';
+  c.strokeStyle = 'rgba(70,120,185,.9)';
+  c.lineWidth = Math.max(0.6, s * 0.08);
+  c.lineCap = 'round';
+  c.shadowColor = 'rgba(150,205,255,1)';
+  c.shadowBlur = s > 7 ? s * 1.8 : 0;
+  c.beginPath();
+  for (const [lx, ph] of [
+    [-s * 0.9, 0],
+    [-s * 0.6, Math.PI],
+    [s * 0.7, Math.PI],
+    [s * 1.0, 0]
+  ]) {
+    c.moveTo(lx, s * 0.1);
+    c.lineTo(lx + Math.sin(t * 9 + ph) * s * 0.55, s * 1.1);
+  }
+  c.stroke();
+  c.beginPath();
+  c.ellipse(0, 0, s * 1.3, s * 0.52, 0, 0, TAU);
+  c.fill();
+  c.stroke();
+  c.beginPath();
+  c.moveTo(s * 0.9, -s * 0.3);
+  c.quadraticCurveTo(s * 1.4, -s * 0.9, s * 1.6, -s * 1.3);
+  c.lineTo(s * 2.2, -s * 1.15);
+  c.lineTo(s * 2.0, -s * 0.9);
+  c.quadraticCurveTo(s * 1.5, -s * 0.55, s * 1.2, s * 0.05);
+  c.closePath();
+  c.fill();
+  c.stroke();
+  c.beginPath();
+  c.moveTo(s * 1.7, -s * 1.3);
+  c.lineTo(s * 1.5, -s * 2.2);
+  c.moveTo(s * 1.6, -s * 1.8);
+  c.lineTo(s * 1.15, -s * 2.0);
+  c.moveTo(s * 1.75, -s * 1.3);
+  c.lineTo(s * 2.1, -s * 2.1);
+  c.moveTo(s * 1.9, -s * 1.7);
+  c.lineTo(s * 2.4, -s * 1.9);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(-s * 1.25, -s * 0.2);
+  c.lineTo(-s * 1.7, -s * 0.5);
+  c.lineTo(-s * 1.3, s * 0.05);
+  c.stroke();
+  c.restore();
+}
+function tentacle(c, x, y, seg, t, ph, rise, u) {
+  let px = x,
+    py = y,
+    ang = -Math.PI / 2;
+  const n = 14;
+  c.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const f = i / n;
+    ang += Math.sin(t * 1.4 + i * 0.55 + ph) * 0.22 * (0.3 + f) + (f > 0.7 ? 0.28 : 0);
+    const nx = px + Math.cos(ang) * seg * rise,
+      ny = py + Math.sin(ang) * seg * rise;
+    c.strokeStyle = `rgba(${INK},${0.85 * rise})`;
+    c.lineWidth = Math.max(0.6, (1 - f) * 3.4 * u + 0.8);
+    c.beginPath();
+    c.moveTo(px, py);
+    c.lineTo(nx, ny);
+    c.stroke();
+    if (i % 2 && f < 0.85) {
+      c.fillStyle = `rgba(${INK},${0.6 * rise})`;
+      c.beginPath();
+      c.arc(px + Math.cos(ang + Math.PI / 2) * (2 * u + 1), py + Math.sin(ang + Math.PI / 2) * (2 * u + 1), 0.8 * u + 0.4, 0, TAU);
+      c.fill();
+    }
+    px = nx;
+    py = ny;
+  }
+}
+
+/* ------------------------------------------------------------------ runtime */
+function initMagic(s, w, h) {
+  const { G, X, S, u } = s;
+  s.walkers.forEach((wk, i) => (wk.name = HP.people[i % HP.people.length]));
+  const home = X.pitch || { x: G.castle.x, y: G.castle.y - S * 4, rx: S * 3, ry: S * 2 };
+  s.mg = {
+    silver: sprite('185,225,255'),
+    green: sprite('160,255,130'),
+    pale: sprite('205,230,255'),
+    owls: [],
+    nextOwl: R(1.5, 4),
+    snitch: { x: home.x, y: home.y, vx: 0, vy: 0, tx: home.x, ty: home.y, next: 0, trail: [], home },
+    riders: X.pitch ? [0, 1, 2, 3].map(i => ({ ph: i * 1.57, v: 0.7 + i * 0.1, col: HOUSES[i] })) : [],
+    ghosts: Math.min(w, h) < 500 ? [{ ph: 0 }] : [{ ph: 0 }, { ph: 2.4 }],
+    stag: null,
+    nextStag: R(10, 18),
+    squid: { age: -1, next: R(4, 8), x: 0, y: 0, ph: 0 },
+    wisps: Array.from({ length: clamp(Math.round((w * h) / 45000), 5, 18) }, () => ({
+      bx: R(0, w),
+      by: R(0, h),
+      ax: R(20, 70) * u + 8,
+      ay: R(15, 50) * u + 6,
+      sx: R(0.15, 0.4),
+      sy: R(0.2, 0.5),
+      p: R(0, 6.28),
+      green: Math.random() < 0.25
+    }))
+  };
+}
+
+function drawMagic(c, s, t, dt, m, w, h, ready, show) {
+  const mg = s.mg,
+    u = s.u,
+    G = s.G,
+    X = s.X,
+    S = s.S,
+    cs = G.castle;
+  dt = Math.min(dt, 0.05);
+
+  // The oath writes itself while the map is inking in.
+  const dur = s.bloom.dur;
+  if (s.age < dur) {
+    const q = clamp(s.age / (dur * 0.7), 0, 1),
+      al = s.age > dur * 0.75 ? 1 - (s.age - dur * 0.75) / (dur * 0.25) : 1;
+    let size = clamp(w * 0.034, 15, 40);
+    c.save();
+    c.font = `italic ${size}px ${FONT}`;
+    const tw0 = c.measureText(OATH).width;
+    if (tw0 > w * 0.86) {
+      size *= (w * 0.86) / tw0;
+      c.font = `italic ${size}px ${FONT}`;
+    }
+    const tw = c.measureText(OATH).width,
+      x0 = w / 2 - tw / 2,
+      y = h * 0.5;
+    c.globalAlpha = clamp(al, 0, 1);
+    c.textBaseline = 'middle';
+    c.save();
+    c.beginPath();
+    c.rect(x0 - 4, y - size, tw * q + 6, size * 2);
+    c.clip();
+    c.lineWidth = size * 0.2;
+    c.lineJoin = 'round';
+    c.strokeStyle = 'rgba(240,226,190,.7)';
+    c.strokeText(OATH, x0, y);
+    c.fillStyle = `rgba(${INK},.92)`;
+    c.fillText(OATH, x0, y);
+    c.restore();
+    if (q < 1) glow(c, s.gold, x0 + tw * q, y + size * 0.1, size * 0.9, 0.8);
+    c.restore();
+  }
+  if (show <= 0) return;
+
+  // Whomping-willow branches, with a periodic fit of rage.
+  if (X.willow) {
+    const wl = X.willow,
+      cx = wl.x,
+      cy = wl.y - wl.s * 2.2,
+      thrash = Math.pow(Math.max(0, Math.sin(t * 0.35)), 4);
+    c.save();
+    c.globalAlpha = show;
+    c.strokeStyle = `rgba(${INK},.85)`;
+    c.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      const a = -Math.PI * (0.12 + i * 0.125) + Math.sin(t * (1.1 + i * 0.23) + i * 2) * (0.18 + 0.5 * thrash),
+        L = wl.s * (2.1 + (i % 3) * 0.45),
+        ex = cx + Math.cos(a) * L,
+        ey = cy + Math.sin(a) * L;
+      c.lineWidth = Math.max(0.7, 2 * u * (1 - i * 0.05));
+      c.beginPath();
+      c.moveTo(cx, cy);
+      c.quadraticCurveTo(cx + Math.cos(a - 0.45) * L * 0.55, cy + Math.sin(a - 0.45) * L * 0.55, ex, ey);
+      c.stroke();
+      c.lineWidth = Math.max(0.5, u * 0.8);
+      c.beginPath();
+      c.moveTo(ex, ey);
+      c.lineTo(ex + Math.cos(a + 0.7) * L * 0.25, ey + Math.sin(a + 0.7) * L * 0.25);
+      c.moveTo(ex, ey);
+      c.lineTo(ex + Math.cos(a - 0.5) * L * 0.22, ey + Math.sin(a - 0.5) * L * 0.22);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  // Eyes blinking open in the forest, and a green flicker from the shack.
+  for (const e of X.eyes) {
+    const al = Math.pow(Math.max(0, Math.sin(t * 0.4 + e.ph * 5)), 40);
+    if (al > 0.02) {
+      glow(c, mg.green, e.x - e.sp, e.y, 2.6 * u + 1.6, al * 0.9 * show);
+      glow(c, mg.green, e.x + e.sp, e.y, 2.6 * u + 1.6, al * 0.9 * show);
+    }
+  }
+  if (X.shack)
+    glow(c, mg.green, X.shack.x - S * 0.3, X.shack.y - S * 0.5, S * 1.1, (0.2 + 0.25 * Math.max(0, Math.sin(t * 2.1))) * show);
+
+  // Floating candles circling above the castle.
+  const nC = Math.min(w, h) < 500 ? 5 : 8;
+  for (let k = 0; k < nC; k++) {
+    const a = t * 0.25 + (k * TAU) / nC,
+      sc = 0.8 + 0.2 * Math.sin(a),
+      x = cs.x + Math.cos(a) * S * 5.2,
+      y = cs.y - S * 2.6 + Math.sin(a) * S * 1.6 + Math.sin(t * 1.3 + k) * S * 0.2,
+      cw = S * 0.2 * sc,
+      ch = S * 0.65 * sc;
+    c.fillStyle = `rgba(244,232,200,${0.95 * show})`;
+    c.strokeStyle = `rgba(${INK},${0.8 * show})`;
+    c.lineWidth = Math.max(0.5, 0.7 * u);
+    c.beginPath();
+    c.rect(x - cw / 2, y, cw, ch);
+    c.fill();
+    c.stroke();
+    glow(c, s.gold, x, y - S * 0.2, S * 0.9 * sc, (0.5 + 0.25 * Math.sin(t * 9 + k * 2)) * (0.6 + m.dark * 0.6) * show);
+    c.fillStyle = `rgba(255,215,120,${0.95 * show})`;
+    c.beginPath();
+    c.ellipse(x, y - S * 0.17 * sc, S * 0.09 * sc, S * 0.2 * sc, 0, 0, TAU);
+    c.fill();
+  }
+
+  // Little lights drifting over the whole map, including behind the text.
+  for (const q of mg.wisps) {
+    const x = q.bx + Math.sin(t * q.sx + q.p) * q.ax,
+      y = q.by + Math.sin(t * q.sy + q.p * 2) * q.ay;
+    glow(c, q.green ? mg.green : s.gold, x, y, 4 * u + 2.5, (0.25 + 0.25 * Math.sin(t * 1.7 + q.p)) * (0.6 + m.dark * 0.6) * show);
+  }
+
+  // Ghosts drifting through the grounds.
+  for (const gh of mg.ghosts) {
+    const a = t * 0.22 + gh.ph,
+      x = cs.x + Math.cos(a) * S * 7,
+      y = cs.y - S * 1.5 + Math.sin(t * 0.35 + gh.ph * 2) * S * 2.6,
+      dir = Math.sin(a) > 0 ? -1 : 1,
+      al = (0.55 + 0.25 * Math.sin(t * 0.8 + gh.ph)) * show,
+      sz = S * 0.9,
+      hem = y + sz * 1.1;
+    glow(c, mg.pale, x, y, S * 2.4, al * 0.5);
+    c.beginPath();
+    c.arc(x, y - sz * 0.4, sz * 0.5, Math.PI, 0);
+    for (let k = 0; k <= 8; k++) c.lineTo(x + sz * 0.5 - (k / 8) * sz, hem + Math.sin(t * 3 + k * 1.4 + gh.ph) * sz * 0.12);
+    c.closePath();
+    c.fillStyle = `rgba(228,240,255,${0.55 * al})`;
+    c.strokeStyle = `rgba(100,140,190,${0.55 * al})`;
+    c.lineWidth = Math.max(0.5, 0.7 * u);
+    c.fill();
+    c.stroke();
+    c.fillStyle = `rgba(60,80,110,${0.8 * al})`;
+    for (const ex of [0.1, 0.32]) {
+      c.beginPath();
+      c.arc(x + dir * sz * ex, y - sz * 0.45, sz * 0.07, 0, TAU);
+      c.fill();
+    }
+    c.beginPath();
+    c.ellipse(x + dir * sz * 0.22, y - sz * 0.2, sz * 0.07, sz * 0.12, 0, 0, TAU);
+    c.fill();
+  }
+
+  // Owls flying out from the castle to the villages.
+  if (ready) {
+    mg.nextOwl -= dt;
+    const dests = G.places.filter(p => p.kind !== 'castle' && p.kind !== 'circle');
+    if (mg.nextOwl <= 0 && mg.owls.length < 3 && dests.length) {
+      const far = [...dests].sort((a, b) => Math.hypot(b.x - cs.x, b.y - cs.y) - Math.hypot(a.x - cs.x, a.y - cs.y)),
+        d = far[Math.floor(Math.random() * Math.min(2, far.length))],
+        sx = cs.x,
+        sy = cs.y - S * 4.5,
+        dist = Math.hypot(d.x - sx, d.y - S - sy) || 1;
+      mg.owls.push({
+        sx,
+        sy,
+        dx: d.x,
+        dy: d.y - S,
+        dist,
+        k: 0,
+        dur: dist / (34 * u + 14),
+        amp: R(0.05, 0.14) * dist * (Math.random() < 0.5 ? 1 : -1),
+        ph: R(0, 6)
+      });
+      mg.nextOwl = R(5, 11);
+    }
+  }
+  for (let i = mg.owls.length - 1; i >= 0; i--) {
+    const o = mg.owls[i];
+    o.k += dt / o.dur;
+    if (o.k >= 1) {
+      mg.owls.splice(i, 1);
+      continue;
+    }
+    const pos = k => {
+      const off = Math.sin(k * Math.PI) * o.amp;
+      return [
+        o.sx + (o.dx - o.sx) * k - ((o.dy - o.sy) / o.dist) * off,
+        o.sy + (o.dy - o.sy) * k + ((o.dx - o.sx) / o.dist) * off - Math.sin(k * 20 + o.ph) * u * 1.5
+      ];
+    };
+    const [x, y] = pos(o.k),
+      [x1, y1] = pos(o.k + 0.01);
+    const al = o.k < 0.08 ? o.k / 0.08 : o.k > 0.92 ? (1 - o.k) / 0.08 : 1;
+    glow(c, s.gold, x, y, 8 * u + 3, 0.2 * al);
+    owl(c, x, y, Math.atan2(y1 - y, x1 - x), 4.5 * u + 2.5, t + o.ph, al);
+  }
+
+  // Broom riders in house colours circling the pitch, and a darting Golden Snitch.
+  if (X.pitch)
+    for (const r of mg.riders) {
+      const a = t * r.v + r.ph,
+        P = X.pitch;
+      rider(
+        c,
+        P.x + Math.cos(a) * P.rx * 0.8,
+        P.y + Math.sin(a) * P.ry * 0.8 - 2 * u,
+        -Math.sin(a) * P.rx * r.v,
+        Math.cos(a) * P.ry * r.v,
+        3.2 * u + 2,
+        r.col,
+        t
+      );
+    }
+  const sn = mg.snitch;
+  sn.next -= dt;
+  if (sn.next <= 0) {
+    const a = R(0, TAU),
+      r = R(0.4, 1) * (sn.home.rx * 1.8 + S * 2);
+    sn.tx = sn.home.x + Math.cos(a) * r * 1.3;
+    sn.ty = sn.home.y + Math.sin(a) * r * 0.8 - S;
+    sn.next = R(0.35, 1.1);
+  }
+  sn.vx += ((sn.tx - sn.x) * 14 - sn.vx * 4.5) * dt;
+  sn.vy += ((sn.ty - sn.y) * 14 - sn.vy * 4.5) * dt;
+  sn.x += sn.vx * dt;
+  sn.y += sn.vy * dt;
+  if (dt > 0) sn.trail.push({ x: sn.x, y: sn.y, age: 0 });
+  for (let i = sn.trail.length - 1; i >= 0; i--) {
+    const q = sn.trail[i];
+    q.age += dt;
+    if (q.age > 0.6) {
+      sn.trail.splice(i, 1);
+      continue;
+    }
+    glow(c, s.gold, q.x, q.y, (3 * u + 1.5) * (1 - q.age / 0.6), 0.5 * (1 - q.age / 0.6) * show);
+  }
+  {
+    const sz = 2.6 * u + 1.6,
+      fl = Math.sin(t * 45);
+    glow(c, s.gold, sn.x, sn.y, 9 * u + 4, 0.8 * show);
+    c.fillStyle = 'rgba(255,246,210,.9)';
+    c.strokeStyle = `rgba(${INK},.6)`;
+    c.lineWidth = 0.6;
+    for (const sd of [-1, 1]) {
+      c.beginPath();
+      c.ellipse(sn.x + sd * sz * 0.9, sn.y - sz * 0.3, sz, sz * 0.28, sd * (0.4 + fl * 0.5), 0, TAU);
+      c.fill();
+      c.stroke();
+    }
+    c.fillStyle = 'rgb(214,160,40)';
+    c.beginPath();
+    c.arc(sn.x, sn.y, sz * 0.45, 0, TAU);
+    c.fill();
+    c.stroke();
+  }
+
+  // A silver stag runs along a road now and then.
+  if (ready) {
+    mg.nextStag -= dt;
+    if (!mg.stag && mg.nextStag <= 0 && G.roads.length) {
+      const r = G.roads[Math.floor(Math.random() * G.roads.length)],
+        dir = Math.random() < 0.5 ? 1 : -1;
+      mg.stag = { path: r.path, d: dir > 0 ? 0 : r.path.total, dir, trail: [] };
+    }
+    const st = mg.stag;
+    if (st) {
+      st.d += st.dir * dt * (60 * u + 25);
+      if (st.d < 0 || st.d > st.path.total) {
+        mg.stag = null;
+        mg.nextStag = R(18, 30);
+      } else {
+        const [x, y, ang] = along(st.path, st.d),
+          face = st.dir > 0 ? ang : ang + Math.PI,
+          a = clamp(Math.min(st.d, st.path.total - st.d) / 40, 0, 1);
+        if (dt > 0) st.trail.push({ x, y: y - 4 * u, age: 0 });
+        for (let i = st.trail.length - 1; i >= 0; i--) {
+          const q = st.trail[i];
+          q.age += dt;
+          if (q.age > 1.6) {
+            st.trail.splice(i, 1);
+            continue;
+          }
+          glow(c, mg.silver, q.x, q.y, (6 * u + 3) * (1 - q.age / 1.6), 0.5 * (1 - q.age / 1.6) * a);
+        }
+        glow(c, mg.silver, x, y - 5 * u, 22 * u + 8, 0.7 * a);
+        stag(c, x, y - 5 * u, Math.cos(face) >= 0 ? 1 : -1, 5 * u + 3, t, a);
+      }
+    }
+  }
+
+  // The lake's giant squid waves a tentacle.
+  const sq = mg.squid;
+  if (ready && sq.age < 0 && (sq.next -= dt) <= 0) {
+    const a = R(0.15, 0.85);
+    [sq.x, sq.y] = G.P(a, G.coastB(a) * R(0.3, 0.5));
+    sq.age = 0;
+    sq.ph = R(0, 6);
+  }
+  if (sq.age >= 0) {
+    sq.age += dt;
+    const k = sq.age / 10;
+    if (k >= 1) {
+      sq.age = -1;
+      sq.next = R(10, 18);
+    } else {
+      const rise = Math.pow(Math.sin(Math.PI * k), 0.7);
+      c.save();
+      c.strokeStyle = `rgba(${INK},${0.4 * rise})`;
+      c.lineWidth = Math.max(0.5, 0.7 * u);
+      for (let r = 1; r <= 2; r++) {
+        c.beginPath();
+        c.ellipse(sq.x, sq.y + 2 * u, (r * 5 + k * 6) * u, (r * 1.8 + k * 2) * u, 0, 0, TAU);
+        c.stroke();
+      }
+      tentacle(c, sq.x - S * 0.8, sq.y, S * 0.55, t, sq.ph, rise, u);
+      tentacle(c, sq.x + S * 0.9, sq.y, S * 0.44, t, sq.ph + 2, rise, u);
+      c.restore();
+    }
+  }
+
+  // Marauder's-Map style names beside each pair of footprints.
+  if (ready) {
+    c.save();
+    c.font = `italic ${clamp(9 * u + 3.5, 8.5, 13)}px ${FONT}`;
+    c.textBaseline = 'middle';
+    c.lineJoin = 'round';
+    c.lineWidth = 3;
+    c.globalAlpha = show;
+    for (const wk of s.walkers) {
+      if (!wk.name || (!wk.x && !wk.y)) continue;
+      const right = wk.x < w * 0.8;
+      c.textAlign = right ? 'left' : 'right';
+      const x = wk.x + (right ? 1 : -1) * (9 * u + 4),
+        y = wk.y - 8 * u - 3;
+      c.strokeStyle = 'rgba(240,226,190,.75)';
+      c.strokeText(wk.name, x, y);
+      c.fillStyle = `rgba(${INK},.8)`;
+      c.fillText(wk.name, x, y);
+    }
+    c.restore();
+  }
+}
+
+Object.assign(NAMES, HP.names);
+
 
 /* ------------------------------------------------------------------ helpers */
 function rng(seed) {
@@ -805,15 +1734,19 @@ function drawMap(w, h, u, G, rand) {
 
   // 9. Places.
   let S = 9 * u + 3; // base size of buildings
+  // The village nearest the castle becomes Hogsmeade: bigger, with more houses.
+  const hogs = G.places
+    .filter(p => p.kind === 'village')
+    .sort((a, b) => Math.hypot(a.x - G.castle.x, a.y - G.castle.y) - Math.hypot(b.x - G.castle.x, b.y - G.castle.y))[0];
   g.lineWidth = Math.max(0.55, 0.85 * u);
   g.strokeStyle = `rgba(${INK},.85)`;
   for (const p of G.places) {
     if (p.kind === 'village' || p.kind === 'port') {
-      const n = p.kind === 'port' ? 4 : 5 + Math.floor(rand() * 3);
+      const n = p.kind === 'port' ? 4 : p === hogs ? 10 : 5 + Math.floor(rand() * 3);
       const spots = [];
       for (let k = 0; k < n; k++) {
         const ang = rand() * TAU,
-          rr = S * (0.5 + rand() * 1.6);
+          rr = S * (0.5 + rand() * 1.6) * (p === hogs ? 1.5 : 1);
         spots.push([p.x + Math.cos(ang) * rr * 1.3, p.y + Math.sin(ang) * rr * 0.8]);
       }
       spots.sort((a, b) => a[1] - b[1]);
@@ -834,74 +1767,7 @@ function drawMap(w, h, u, G, rand) {
         g.lineWidth = Math.max(0.55, 0.85 * u);
       }
     } else if (p.kind === 'castle') {
-      const S0 = S;
-      S = S0 * 1.35;
-      hill(g, p.x, p.y + S * 0.9, S * 3.4, u);
-      // Ring wall with small round towers.
-      const rx = S * 2.6,
-        ry = S * 1.2,
-        cy = p.y + S * 0.2;
-      g.beginPath();
-      g.ellipse(p.x, cy, rx, ry, 0, 0, TAU);
-      hide(g);
-      g.lineWidth = Math.max(0.8, 1.3 * u);
-      g.stroke();
-      g.lineWidth = Math.max(0.55, 0.85 * u);
-      g.beginPath();
-      g.ellipse(p.x, cy, rx - 2.5 * u, ry - 2 * u, 0, 0, TAU);
-      g.stroke();
-      for (let k = 0; k < 8; k++) {
-        const a = (k * TAU) / 8 + 0.2;
-        g.beginPath();
-        g.arc(p.x + Math.cos(a) * rx, cy + Math.sin(a) * ry, S * 0.28, 0, TAU);
-        hide(g);
-        g.stroke();
-      }
-      // The keep, drawn upright inside the walls.
-      const base = cy + ry * 0.35;
-      const tower = (tx, tw, th, roof) => {
-        g.beginPath();
-        g.rect(tx - tw / 2, base - th, tw, th);
-        hide(g);
-        g.stroke();
-        g.beginPath();
-        g.moveTo(tx - tw / 2 - tw * 0.15, base - th);
-        g.lineTo(tx, base - th - roof);
-        g.lineTo(tx + tw / 2 + tw * 0.15, base - th);
-        g.closePath();
-        g.fillStyle = `rgba(${INK},.3)`;
-        g.fill();
-        g.stroke();
-        g.beginPath();
-        g.moveTo(tx, base - th - roof);
-        g.lineTo(tx, base - th - roof - S * 0.7);
-        g.stroke();
-        flags.push([tx, base - th - roof - S * 0.7, S / 9]);
-        g.beginPath();
-        g.moveTo(tx - tw * 0.12, base - th * 0.45);
-        g.lineTo(tx - tw * 0.12, base - th * 0.62);
-        g.arc(tx, base - th * 0.62, tw * 0.12, Math.PI, 0);
-        g.lineTo(tx + tw * 0.12, base - th * 0.45);
-        g.stroke();
-        lights.push([tx, base - th * 0.55, S * 0.5]);
-      };
-      tower(p.x - S * 1.25, S * 0.7, S * 2.1, S * 0.9);
-      tower(p.x + S * 1.25, S * 0.7, S * 2.3, S * 0.9);
-      g.beginPath(); // curtain wall with battlements
-      g.rect(p.x - S * 1.0, base - S * 1.4, S * 2, S * 1.4);
-      hide(g);
-      g.stroke();
-      g.beginPath();
-      for (let k = 0; k < 5; k++) g.rect(p.x - S + k * S * 0.44, base - S * 1.62, S * 0.24, S * 0.22);
-      g.stroke();
-      tower(p.x, S * 0.95, S * 3.2, S * 1.3);
-      g.beginPath();
-      g.moveTo(p.x - S * 0.3, base);
-      g.lineTo(p.x - S * 0.3, base - S * 0.55);
-      g.arc(p.x, base - S * 0.55, S * 0.3, Math.PI, 0);
-      g.lineTo(p.x + S * 0.3, base);
-      g.stroke();
-      S = S0;
+      grandCastle(g, p, S, u, flags, lights);
     } else if (p.kind === 'tower') {
       hill(g, p.x, p.y + S * 0.3, S * 1.8, u);
       const tw = S * 0.8,
@@ -969,6 +1835,9 @@ function drawMap(w, h, u, G, rand) {
     windmill = { x, y: y - S * 1.55, r: S * 1.3 };
   }
 
+  // Wizarding extras: Quidditch pitch, gnarled tree, shack, eyes in the forest.
+  const X = drawExtras(g, G, u, S, rand, woods, w, h);
+
   // 10. Place names.
   if (labels) {
     const fs = clamp(12 * u + 3, 9.5, 17);
@@ -980,8 +1849,10 @@ function drawMap(w, h, u, G, rand) {
     });
     for (const p of G.places) {
       const name =
-        p.kind === 'castle'
-          ? pick(rand, NAMES.castle)
+        p === hogs
+          ? 'Hogsmeade'
+          : p.kind === 'castle'
+            ? pick(rand, NAMES.castle)
           : p.kind === 'port'
             ? pick(rand, NAMES.port)
             : p.kind === 'tower'
@@ -992,12 +1863,24 @@ function drawMap(w, h, u, G, rand) {
       const big = p.kind === 'castle';
       const below = p.y + S * (big ? 3 : 1.7),
         above = p.y - S * (big ? 5.2 : p.kind === 'tower' ? 6.4 : 2.6);
-      label(g, name, p.x, below, big ? fs * 1.25 : fs, { spaced: big, italic: !big }, taken, [
+      label(g, name, p.x, below, big ? fs * 1.25 : p === hogs ? fs * 1.12 : fs, { spaced: big, italic: !big }, taken, [
         [p.x, above],
         [p.x + S * 4, p.y],
         [p.x - S * 4, p.y]
       ]);
     }
+    if (X.pitch) {
+      const P0 = X.pitch;
+      label(g, 'Quidditch Pitch', P0.x, P0.y + P0.ry + S * 2.1, fs * 0.95, {}, taken, [[P0.x, P0.y - P0.ry - S * 3.2]]);
+    }
+    if (X.willow)
+      label(g, 'Whomping Willow', X.willow.x, X.willow.y + S * 1.5, fs * 0.85, { optional: true }, taken, [
+        [X.willow.x, X.willow.y - X.willow.s * 5.5]
+      ]);
+    if (X.shack)
+      label(g, 'Shrieking Shack', X.shack.x, X.shack.y + S * 1.1, fs * 0.85, { optional: true }, taken, [
+        [X.shack.x, X.shack.y - S * 2.4]
+      ]);
     const woodNames = [...NAMES.wood];
     woods.forEach(wd =>
       label(
@@ -1102,7 +1985,7 @@ function drawMap(w, h, u, G, rand) {
     label(g, 'Leagues', sx, sy - 8 * u - 3, clamp(10 * u + 2, 8, 14));
   }
 
-  return { ink, flags, chimneys, lights, windmill, compass, S };
+  return { ink, flags, chimneys, lights, windmill, compass, S, X };
 }
 
 function drawCompass(g, c, u) {
@@ -1209,7 +2092,7 @@ function drawCartouche(g, x, y, wd, ht, u, title) {
   label(g, title, x, y - ht * 0.08, fitSize(g, title, wd * 0.78, clamp(wd * 0.085, 10, 24)), {
     italic: true
   });
-  const sub = 'as it was charted in the Year of the Comet';
+  const sub = HP.subtitle;
   label(g, sub, x, y + ht * 0.26, fitSize(g, sub, wd * 0.78, clamp(wd * 0.042, 7, 12)));
 }
 
@@ -1332,7 +2215,7 @@ export default {
         ang: 0
       };
     });
-    return {
+    const s = {
       bg,
       ...M,
       G,
@@ -1368,6 +2251,8 @@ export default {
         p: R(0, 6.28)
       }))
     };
+    initMagic(s, w, h);
+    return s;
   },
 
   draw(c, s, t, dt, m, w, h) {
@@ -1691,6 +2576,9 @@ export default {
         a = t * 0.35;
       glow(c, s.gold, cp.x + Math.cos(a) * cp.r * 0.95, cp.y + Math.sin(a) * cp.r * 0.95, cp.r * 0.3, 0.35);
     }
+
+    // 8b. The wizarding layer: owls, snitch, riders, ghosts, Patronus, names beside footprints.
+    drawMagic(c, s, t, dt, m, w, h, ready, show);
 
     // 9. Candlelight from the corners and drifting motes.
     // (the light is pre-rendered once; flickering only changes how strongly it's laid on)
