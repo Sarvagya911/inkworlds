@@ -24,10 +24,7 @@ import { cur } from './reader/reader.js';
 import { session } from './services/session.js';
 import { primeOfflineCache } from './services/index.js';
 import { CONTENT_TYPES } from './services/books.js';
-import {
-  getUploadContentType,
-  setUploadContentType
-} from './app/upload.js';
+import { setUploadContentType } from './app/upload.js';
 import { initNativeApp } from './native/app.js';
 
 const fileInput = $('fileIn');
@@ -52,8 +49,6 @@ fileInput.addEventListener('change', e => {
 
 function pickExternalContentType(fileName, mimeType) {
   const isPdf = /\.pdf$/i.test(fileName || '') || mimeType === 'application/pdf';
-  const isEpub = /\.epub$/i.test(fileName || '') || mimeType === 'application/epub+zip';
-  const isTxt = /\.txt$/i.test(fileName || '') || mimeType === 'text/plain';
   const mangaAllowed = isPdf;
 
   return new Promise(resolve => {
@@ -183,14 +178,13 @@ async function handleNativeFile(detail) {
     const type = detail.type || blob.type || 'application/octet-stream';
     const file = new File([blob], detail.name || 'book', { type });
 
-    // External Android imports must use the user's explicit choice, not the
-    // last type selected in the desktop Library uploader. Reset immediately
-    // afterwards so normal desktop/mobile uploads keep their existing state.
+    // External Android imports use the user's explicit choice. Reset immediately
+    // afterwards so the normal desktop/mobile uploader keeps its existing state.
     setUploadContentType(selectedType);
     try {
-      handleFile(file, {
-        preferredTitle: detail.native ? detail.name : ''
-      });
+      // Do not pass Android's display name as preferredTitle. PDF/EPUB metadata
+      // should remain authoritative; the Android filename is only the fallback.
+      handleFile(file);
     } finally {
       setUploadContentType(CONTENT_TYPES.BOOK);
     }
