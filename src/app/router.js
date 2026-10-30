@@ -18,6 +18,7 @@ import { viewWorlds } from '../pages/worlds.js';
 import { closeReader, cur, openReader } from '../reader/reader.js';
 import { session } from '../services/session.js';
 import { configured } from '../services/supabase.js';
+import { mountBookActions } from '../components/book-actions.js';
 
 export let routeId = 0,
   subs = [];
@@ -106,6 +107,7 @@ export async function route() {
   } else if ((m = h.match(/^#\/book\/(.+)$/))) {
     setNav('library');
     await viewBook(decodeURIComponent(m[1]));
+    await mountBookActions(decodeURIComponent(m[1]));
   } else if (h === '#/discover') {
     setNav('discover');
     titled('Discover');
