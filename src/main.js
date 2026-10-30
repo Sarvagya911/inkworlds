@@ -15,7 +15,7 @@ import {
 import { syncProgressDown } from './app/sync.js';
 import { initAuth, onAuthChange } from './auth/session.js';
 import {
-  $,
+  $, 
   applyUiTheme,
   prefs,
   savePrefs
@@ -184,12 +184,38 @@ async function inferPdfTitle(blob) {
     }).promise;
 
     try {
-      const info = (await pdf.getMetadata()).info || {};
-      const metadataTitle = usablePdfTitle(info.Title);
+      const metadata = await pdf.getMetadata();
+      const info = metadata?.info || {};
+      const xmpTitle = (() => {
+        try {
+          const value = metadata?.metadata?.get?.('dc:title');
+          if (typeof value === 'string') return value;
+          if (value && typeof value === 'object') return value['rdf:li'] || value['@value'] || '';
+        } catch (_) {}
+        return '';
+      })();
+
+      const metadataTitle = usablePdfTitle(info.Title) || usablePdfTitle(xmpTitle);
       if (metadataTitle) return metadataTitle;
 
-      const maxPages = Math.min(pdf.numPages, 4);
+      const maxPages = Math.min(pdf.numPages, 8);
       let best = null;
+
+      const isBadTitleLine = text =>
+        /^(?:to|for)\s+(?:my|the|a|an|all|you)\b/i.test(text)
+        || /^dedicated\s+to\b/i.test(text)
+        || /^in\s+memory\s+of\b/i.test(text)
+        || /^because\s+you\b/i.test(text)
+        || /^this\s+(?:book|story)\s+(?:is|was)\b/i.test(text)
+        || /^(?:contents|table of contents|copyright|isbn|published by|printed in|first edition|second edition|third edition)$/i.test(text);
+
+      const cleanCandidate = text => {
+        const value = usablePdfTitle(text);
+        if (!value || isBadTitleLine(value)) return '';
+        if (/^(?:chapter|part|volume|prologue|epilogue)\b/i.test(value)) return '';
+        if (/^\d{1,4}$/.test(value)) return '';
+        return value;
+      };
 
       for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
         const page = await pdf.getPage(pageNumber);
@@ -227,17 +253,38 @@ async function inferPdfTitle(blob) {
           }
           flush();
 
+          // Many ebook PDFs put the real title immediately before a copyright
+          // notice. Prefer that deterministic signal over a large dedication.
+          for (let i = 0; i < lines.length; i++) {
+            const raw = lines[i].text;
+            const copyrightIndex = raw.search(/\bcopyright\b/i);
+
+            if (copyrightIndex > 0) {
+              const candidate = cleanCandidate(raw.slice(0, copyrightIndex));
+              if (candidate && candidate.split(/\s+/).length >= 2) return candidate;
+            }
+
+            if (copyrightIndex >= 0) {
+              for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+                const candidate = cleanCandidate(lines[j].text);
+                if (candidate && candidate.split(/\s+/).length >= 2) return candidate;
+              }
+            }
+          }
+
           for (const line of lines) {
-            const text = usablePdfTitle(line.text);
+            const text = cleanCandidate(line.text);
             if (!text) continue;
-            if (/^(?:chapter|contents|table of contents|copyright|isbn|published by|by\b)/i.test(text)) continue;
-            if (/^\d{1,4}$/.test(text)) continue;
 
             let score = line.maxH * 10;
-            if (pageNumber === 1) score += 8;
+            if (pageNumber <= 2) score += 10;
+            if (pageNumber === 1) score += 4;
             if (text.length >= 5 && text.length <= 70) score += 5;
             if (text.split(/\s+/).length >= 2) score += 3;
             if (/^[A-Z0-9 .,'’'&-]+$/.test(text)) score += 2;
+            if (/[.!?]$/.test(text)) score -= 12;
+            if (text.split(/\s+/).length > 12) score -= 15;
+            if (/\b(?:because|when|while|although|really|very|please)\b/i.test(text)) score -= 8;
 
             if (!best || score > best.score) best = { score, text };
           }
