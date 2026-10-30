@@ -24,4 +24,4 @@ export {
   deleteBookmark,
   addReading,
   readingDays
-} from './offline.js';
+} from './offline-v2.js';
