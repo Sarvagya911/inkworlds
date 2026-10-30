@@ -1,0 +1,66 @@
+name: Native PDF title fix 2
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch books.js
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/app/books.js')
+          text = path.read_text(encoding='utf-8')
+
+          text, n = re.subn(
+              r'export async function addFile\(file\) \{',
+              'export async function addFile(file, options = {}) {',
+              text,
+              count=1
+          )
+          if n != 1:
+              raise SystemExit(f'addFile signature patch count={n}')
+
+          text, n = re.subn(
+              r'(\n\s*let chapters = \[\];\n)',
+              r'''\1\n    const preferredTitle =\n      (options.preferredTitle || '')\n        .replace(/\\.[^.]+$/, '')\n        .trim();\n''',
+              text,
+              count=1
+          )
+          if n != 1:
+              raise SystemExit(f'preferredTitle insertion count={n}')
+
+          pattern = re.compile(
+              r'(\s*title\s*=\s*cleanMetaTitle\.length\s*>\s*2\s*&&\s*!genericPdfTitle\s*\?\s*cleanMetaTitle\s*:\s*\x27\x27;)'
+          )
+          text, n = pattern.subn(
+              r'''\1\n\n      if (preferredTitle.length > 2) {\n        title = preferredTitle;\n      }''',
+              text
+          )
+          if n != 2:
+              raise SystemExit(f'PDF title override count={n}')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit fix and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/books.js
+          git commit -m "fix: preserve Android PDF filename"
+          git rm .github/workflows/fix-native-pdf-title-2.yml
+          git commit -m "chore: remove temporary native title workflow"
+          git push origin HEAD:main
