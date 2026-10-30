@@ -114,7 +114,9 @@ public class MainActivity extends BridgeActivity {
         new Thread(() -> {
             try {
                 File dir = new File(getCacheDir(), "incoming");
-                if (!dir.exists()) dir.mkdirs();
+                if (!dir.exists() && !dir.mkdirs() && !dir.isDirectory()) {
+                    throw new IllegalStateException("Unable to prepare temporary file storage.");
+                }
 
                 String safeName = finalName.replaceAll("[^A-Za-z0-9._-]", "_");
                 File out = new File(dir, System.currentTimeMillis() + "-" + safeName);
@@ -153,16 +155,19 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void dispatchWhenReady(Runnable action, int attempt) {
-        if (getBridge() != null && getBridge().getWebView() != null) {
-            String url = getBridge().getWebView().getUrl();
-            if (url != null && url.contains("localhost")) {
-                action.run();
-                return;
+        mainHandler.post(() -> {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                String url = getBridge().getWebView().getUrl();
+                if (url != null && url.contains("localhost")) {
+                    action.run();
+                    return;
+                }
             }
-        }
-        if (attempt < 50) {
-            mainHandler.postDelayed(() -> dispatchWhenReady(action, attempt + 1), 200);
-        }
+
+            if (attempt < 50) {
+                mainHandler.postDelayed(() -> dispatchWhenReady(action, attempt + 1), 200);
+            }
+        });
     }
 
     private String js(String value) {
