@@ -177,14 +177,17 @@ async function handleNativeFile(detail) {
     const blob = await response.blob();
     const type = detail.type || blob.type || 'application/octet-stream';
     const file = new File([blob], detail.name || 'book', { type });
+    const isEpub = /\.epub$/i.test(file.name) || file.type === 'application/epub+zip';
 
-    // External Android imports use the user's explicit choice. Reset immediately
-    // afterwards so the normal desktop/mobile uploader keeps its existing state.
+    // External Android imports use the user's explicit choice. Keep it selected
+    // until the asynchronous import finishes, then restore the normal default.
     setUploadContentType(selectedType);
     try {
-      // Do not pass Android's display name as preferredTitle. PDF/EPUB metadata
-      // should remain authoritative; the Android filename is only the fallback.
-      handleFile(file);
+      if (isEpub) {
+        await addEpubFile(file);
+      } else {
+        await addFile(file);
+      }
     } finally {
       setUploadContentType(CONTENT_TYPES.BOOK);
     }
