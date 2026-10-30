@@ -22,6 +22,8 @@ public class MainActivity extends BridgeActivity {
 
     private static final String FILE_EVENT = "inkworlds-native-file";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private String lastFileIntentKey = null;
+    private long lastFileIntentAt = 0L;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,13 +80,19 @@ public class MainActivity extends BridgeActivity {
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
 
-        // Some providers (notably messaging apps) expose an internal name such as
-        // DOC000233.pdf. Prefer the title carried by the VIEW intent when available.
         String name = intent.getStringExtra(Intent.EXTRA_TITLE);
         if (isUsableName(name)) name = ensureExtension(name, mime);
         else name = queryDisplayName(uri);
         if (!isUsableName(name)) name = nameFromUri(uri);
         if (!isUsableName(name)) name = "book";
+
+        // Some Android providers can deliver the same ACTION_VIEW intent more than once
+        // during a cold start. Do not import the same selected file twice.
+        String intentKey = intent.getAction() + "|" + uri + "|" + mime + "|" + name;
+        long now = SystemClock.uptimeMillis();
+        if (intentKey.equals(lastFileIntentKey) && now - lastFileIntentAt < 5000L) return;
+        lastFileIntentKey = intentKey;
+        lastFileIntentAt = now;
 
         final String finalMime = mime;
         final String finalName = name;
