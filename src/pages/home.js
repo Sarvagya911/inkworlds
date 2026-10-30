@@ -20,11 +20,21 @@ export async function viewHome() {
   let latest = null,
     lp = null;
   const candidates = [...SAMPLES.map(sampleMeta)];
-  if (signedIn()) {
+
+  // Cloud data is optional on Home. A disconnected device should still
+  // render the complete local app shell and sample content immediately.
+  if (signedIn() && navigator.onLine !== false) {
     try {
-      candidates.push(...(await cloud.myBooks()));
+      const remote = await Promise.race([
+        cloud.myBooks(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('offline timeout')), 1500)
+        )
+      ]);
+      candidates.push(...remote);
     } catch (e) {}
   }
+
   for (const b of candidates) {
     const p = progOf(b.id);
     if (p && p.updated && (!lp || p.updated > lp.updated)) {
