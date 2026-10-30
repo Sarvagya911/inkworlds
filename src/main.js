@@ -159,7 +159,8 @@ function looksLikeTransportName(name) {
     .replace(/\.[^.]+$/, '')
     .replace(/[{}]/g, '');
 
-  return /^[0-9a-f]{8}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{12}$/i.test(base)
+  return /^(?:book|untitled book)$/i.test(base)
+    || /^[0-9a-f]{8}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{12}$/i.test(base)
     || /^(?:DOC|DOCUMENT|IMG|WA)[ _-]?\d+/i.test(base);
 }
 
@@ -280,8 +281,10 @@ async function handleNativeFile(detail) {
     let importName = detail.name || 'book';
 
     // WhatsApp/Android providers can expose a transport UUID instead of the
-    // real filename. For PDFs, recover the title from embedded metadata or the
-    // document's title page before handing the file to the normal importer.
+    // real filename. MainActivity intentionally sanitizes that case to "book",
+    // so treat that fallback as a transport name too. For PDFs, recover the
+    // title from embedded metadata or the document's title page before handing
+    // the file to the normal importer.
     if (type === 'application/pdf' && looksLikeTransportName(importName)) {
       const inferredTitle = await inferPdfTitle(blob);
       if (inferredTitle) importName = `${inferredTitle}.pdf`;
