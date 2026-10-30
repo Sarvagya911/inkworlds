@@ -7,7 +7,6 @@ import {
   addToLibrary,
   downloadBook,
   isDownloaded,
-  isInLibrary,
   removeDownload
 } from '../services/index.js';
 import { THEMES, fontStack } from '../config/themes.js';
@@ -105,18 +104,16 @@ export function bookCard(b, ppl, showContentType = true) {
     : '';
 
   return `
-    <article class="bcard">
-      <a href="#/book/${enc(b.id)}" class="bcard-link">
-        ${cover}
-        <div class="binfo">
-          <b>${esc(b.title)}</b>
-          ${typeBadge}
-          <span class="by">${b.author ? esc(b.author) + '. ' : ''}${esc(th.name)}</span>
-          <span class="by">${b.sample ? 'Inkworlds sample' : `Shared by ${esc(nameOf(ppl, b.ownerId))}`}${b.likeCount ? `. ${b.likeCount} like${b.likeCount === 1 ? '' : 's'}` : ''}${b.commentCount ? `. ${b.commentCount} comment${b.commentCount === 1 ? '' : 's'}` : ''}</span>
-          ${b.desc ? `<p>${nl(b.desc)}</p>` : ''}
-        </div>
-      </a>
+    <a class="bcard" href="#/book/${enc(b.id)}">
+      ${cover}
+      <div class="binfo">
+        <b>${esc(b.title)}</b>
+        ${typeBadge}
+        <span class="by">${b.author ? esc(b.author) + '. ' : ''}${esc(th.name)}</span>
+        <span class="by">${b.sample ? 'Inkworlds sample' : `Shared by ${esc(nameOf(ppl, b.ownerId))}`}${b.likeCount ? `. ${b.likeCount} like${b.likeCount === 1 ? '' : 's'}` : ''}${b.commentCount ? `. ${b.commentCount} comment${b.commentCount === 1 ? '' : 's'}` : ''}</span>
+        ${b.desc ? `<p>${nl(b.desc)}</p>` : ''}
+      </div>
       ${actions}
-    </article>
+    </a>
   `;
 }
