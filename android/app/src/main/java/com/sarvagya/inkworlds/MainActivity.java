@@ -21,6 +21,7 @@ import java.io.InputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String FILE_EVENT = "inkworlds-native-file";
+    private static final String AUTH_EVENT = "inkworlds-auth-callback";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private String lastFileIntentKey = null;
     private long lastFileIntentAt = 0L;
@@ -76,6 +77,14 @@ public class MainActivity extends BridgeActivity {
         Uri uri = intent.getData();
         if (uri == null) return;
 
+        // The custom auth callback is a deep link, not a document. It must never
+        // go through ContentResolver/openInputStream (which caused the
+        // "No content provider" message seen after Google sign-in).
+        if (isAuthCallback(uri)) {
+            dispatchAuthCallback(uri.toString());
+            return;
+        }
+
         String mime = intent.getType();
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
@@ -124,6 +133,20 @@ public class MainActivity extends BridgeActivity {
                 dispatchError(e.getMessage() == null ? "Could not open the selected file." : e.getMessage());
             }
         }).start();
+    }
+
+    private boolean isAuthCallback(Uri uri) {
+        return uri != null
+            && "com.sarvagya.inkworlds".equals(uri.getScheme())
+            && "auth".equals(uri.getHost())
+            && "/callback".equals(uri.getPath());
+    }
+
+    private void dispatchAuthCallback(String callbackUrl) {
+        dispatchWhenReady(() -> {
+            String js = "window.dispatchEvent(new CustomEvent('" + AUTH_EVENT + "',{detail:{url:" + js(callbackUrl) + "}}));";
+            getBridge().getWebView().evaluateJavascript(js, null);
+        });
     }
 
     private String firstPreferredName(String... candidates) {
