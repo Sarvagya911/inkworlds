@@ -1,5 +1,5 @@
 // Public books, with search, world filter, content-type filter and paging.
-import { app, errMsg } from '../app/helpers.js';
+import { app, errMsg, signedIn } from '../app/helpers.js';
 import { routeId } from '../app/router.js';
 import { bookCard } from '../components/book-card.js';
 import { CONTENT_TYPES } from '../services/books.js';
@@ -55,6 +55,11 @@ export async function viewDiscover() {
   let seq = 0;
   let contentType = '';
   let offline = false;
+  let libraryIds = [];
+
+  if (signedIn()) {
+    libraryIds = await cloud.myLibraryIds().catch(() => []);
+  }
 
   const tabs = document.querySelectorAll('[data-content-type]');
 
@@ -71,6 +76,7 @@ export async function viewDiscover() {
     if (reset) {
       page = 0;
       items = [];
+      if (signedIn()) libraryIds = await cloud.myLibraryIds().catch(() => libraryIds);
     }
 
     $('dinfo').textContent = 'Loading…';
@@ -89,6 +95,7 @@ export async function viewDiscover() {
 
       if (my !== seq || rid !== routeId) return;
 
+      got.forEach(b => { b.inLibrary = libraryIds.includes(b.id); });
       items = items.concat(got);
       const ppl = await Promise.race([
         cloud.profiles(items.map(b => b.ownerId)),
