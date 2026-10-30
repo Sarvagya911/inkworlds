@@ -20,6 +20,7 @@ function writeCache(value) {
 
 export async function myLibraryIds() {
   if (!myId()) return [];
+  if (navigator.onLine === false) return readCache().filter(b => b.libraryAdded).map(b => b.id);
   try {
     const { data, error } = await sb()
       .from('book_library')
@@ -46,6 +47,15 @@ export async function addToLibrary(bookId) {
     .insert({ user_id: myId(), book_id: bookId });
 
   if (error && error.code !== '23505') throw error;
+
+  const book = await booksCloud.bookMeta(bookId).catch(() => null);
+  if (book) {
+    writeCache([
+      { ...book, libraryAdded: true, added: Date.now() },
+      ...readCache().filter(b => b.id !== bookId)
+    ]);
+  }
+
   return true;
 }
 
@@ -57,11 +67,13 @@ export async function removeFromLibrary(bookId) {
     .eq('user_id', myId())
     .eq('book_id', bookId);
   if (error) throw error;
+  writeCache(readCache().filter(b => b.id !== bookId));
 }
 
 export async function myBooks() {
   const cached = readCache();
   if (!myId()) return [];
+  if (navigator.onLine === false) return cached;
 
   try {
     const owned = await booksCloud.myBooks();
