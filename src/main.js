@@ -73,6 +73,11 @@ window.addEventListener('inkworlds-native-file', e => {
   handleNativeFile(e.detail);
 });
 
+// Native Android waits for this flag before dispatching a file opened via
+// ACTION_VIEW. This avoids losing the event during a cold start while main.js
+// is still being evaluated.
+window.__inkworldsNativeReady = true;
+
 let dragDepth = 0;
 
 addEventListener('dragenter', e => {
