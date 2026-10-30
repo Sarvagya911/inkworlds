@@ -80,10 +80,13 @@ public class MainActivity extends BridgeActivity {
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
 
+        // For ACTION_VIEW, the provider's actual display name is the safest source
+        // for the filename. EXTRA_TITLE can be a document/URI identifier (and in
+        // some apps is UUID-like), which must never replace the real book filename.
         String name = firstUsableName(
+            queryDisplayName(uri),
             intent.getStringExtra(Intent.EXTRA_TITLE),
             intent.getStringExtra(Intent.EXTRA_SUBJECT),
-            queryDisplayName(uri),
             nameFromUri(uri)
         );
         if (!isUsableName(name)) name = "book";
@@ -138,7 +141,8 @@ public class MainActivity extends BridgeActivity {
         String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
         return !base.matches("(?i)(DOC|DOCUMENT)[ _-]?\\d+.*")
             && !base.matches("(?i)IMG[_ -]?\\d+.*")
-            && !base.matches("(?i)WA[_ -]?\\d+.*");
+            && !base.matches("(?i)WA[_ -]?\\d+.*")
+            && !base.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}");
     }
 
     private String ensureExtension(String name, String mime) {
