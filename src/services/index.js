@@ -25,3 +25,5 @@ export {
   addReading,
   readingDays
 } from './offline-v2.js';
+
+export { primeOfflineCache } from './offline-prime.js';
