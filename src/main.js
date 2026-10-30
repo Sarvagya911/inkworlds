@@ -30,13 +30,13 @@ if (fileInput) {
   fileInput.accept = `${fileInput.accept || ''},.epub,application/epub+zip`;
 }
 
-function handleFile(file) {
+function handleFile(file, options = {}) {
   if (!file) return;
   if (/\.epub$/i.test(file.name) || file.type === 'application/epub+zip') {
     addEpubFile(file);
     return;
   }
-  addFile(file);
+  addFile(file, options);
 }
 
 fileInput.addEventListener('change', e => {
@@ -62,7 +62,9 @@ async function handleNativeFile(detail) {
     const blob = await response.blob();
     const type = detail.type || blob.type || 'application/octet-stream';
     const file = new File([blob], detail.name || 'book', { type });
-    handleFile(file);
+    handleFile(file, {
+      preferredTitle: detail.native ? detail.name : ''
+    });
   } catch (e) {
     const { toast } = await import('./lib/utils.js');
     toast(e?.message || 'Could not open the selected file.', 6000);
