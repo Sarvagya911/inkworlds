@@ -468,7 +468,7 @@ async function mangaCover(pdf) {
 }
 
 
-export async function addFile(file) {
+export async function addFile(file, options = {}) {
   if (!file) {
     return;
   }
