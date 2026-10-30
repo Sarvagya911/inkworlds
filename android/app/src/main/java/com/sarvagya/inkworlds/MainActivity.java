@@ -80,15 +80,19 @@ public class MainActivity extends BridgeActivity {
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
 
-        String name = intent.getStringExtra(Intent.EXTRA_TITLE);
-        if (isUsableName(name)) name = ensureExtension(name, mime);
-        else name = queryDisplayName(uri);
-        if (!isUsableName(name)) name = nameFromUri(uri);
+        String name = firstUsableName(
+            intent.getStringExtra(Intent.EXTRA_TITLE),
+            intent.getStringExtra(Intent.EXTRA_SUBJECT),
+            queryDisplayName(uri),
+            nameFromUri(uri)
+        );
         if (!isUsableName(name)) name = "book";
+        name = ensureExtension(name, mime);
 
         // Some Android providers can deliver the same ACTION_VIEW intent more than once
-        // during a cold start. Do not import the same selected file twice.
-        String intentKey = intent.getAction() + "|" + uri + "|" + mime + "|" + name;
+        // during a cold start. The URI itself identifies the selected document, so do not
+        // include the display name in the duplicate key.
+        String intentKey = intent.getAction() + "|" + uri + "|" + mime;
         long now = SystemClock.uptimeMillis();
         if (intentKey.equals(lastFileIntentKey) && now - lastFileIntentAt < 5000L) return;
         lastFileIntentKey = intentKey;
@@ -122,10 +126,19 @@ public class MainActivity extends BridgeActivity {
         }).start();
     }
 
+    private String firstUsableName(String... candidates) {
+        for (String candidate : candidates) {
+            if (isUsableName(candidate)) return candidate.trim();
+        }
+        return null;
+    }
+
     private boolean isUsableName(String name) {
         if (name == null || name.trim().isEmpty()) return false;
         String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
-        return !base.matches("(?i)(DOC|DOCUMENT)[_-]?\\d+") && !base.matches("(?i)IMG[_-]?\\d+");
+        return !base.matches("(?i)(DOC|DOCUMENT)[ _-]?\\d+.*")
+            && !base.matches("(?i)IMG[_ -]?\\d+.*")
+            && !base.matches("(?i)WA[_ -]?\\d+.*");
     }
 
     private String ensureExtension(String name, String mime) {
@@ -139,7 +152,7 @@ public class MainActivity extends BridgeActivity {
     private void dispatchFile(File file, String name, String mime) {
         dispatchWhenReady(() -> {
             String nativePath = file.getAbsolutePath();
-            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(nativePath) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
+            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(nativePath) + ",name:" + js(name) + ",type:" + js(mime) + ",native:true}}));";
             getBridge().getWebView().evaluateJavascript(js, null);
         });
     }
@@ -208,6 +221,6 @@ public class MainActivity extends BridgeActivity {
 
     private String nameFromUri(Uri uri) {
         String last = uri.getLastPathSegment();
-        return isUsableName(last) ? last : "book";
+        return isUsableName(last) ? last : null;
     }
 }
