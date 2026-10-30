@@ -149,17 +149,41 @@ public class MainActivity extends BridgeActivity {
 
     private void dispatchWhenReady(Runnable action, int attempt) {
         mainHandler.post(() -> {
-            if (getBridge() != null && getBridge().getWebView() != null) {
-                String url = getBridge().getWebView().getUrl();
-                if (url != null && url.contains("localhost")) {
-                    action.run();
-                    return;
+            if (getBridge() == null || getBridge().getWebView() == null) {
+                retryDispatch(action, attempt);
+                return;
+            }
+
+            String url = getBridge().getWebView().getUrl();
+            if (url == null || !url.contains("localhost")) {
+                retryDispatch(action, attempt);
+                return;
+            }
+
+            String checkReady =
+                "typeof window.__inkworldsNativeReady !== 'undefined' && " +
+                "window.__inkworldsNativeReady === true";
+
+            getBridge().getWebView().evaluateJavascript(
+                checkReady,
+                result -> {
+                    if ("true".equals(result)) {
+                        action.run();
+                    } else {
+                        retryDispatch(action, attempt);
+                    }
                 }
-            }
-            if (attempt < 50) {
-                mainHandler.postDelayed(() -> dispatchWhenReady(action, attempt + 1), 200);
-            }
+            );
         });
+    }
+
+    private void retryDispatch(Runnable action, int attempt) {
+        if (attempt < 100) {
+            mainHandler.postDelayed(
+                () -> dispatchWhenReady(action, attempt + 1),
+                100
+            );
+        }
     }
 
     private String js(String value) {
@@ -176,6 +200,6 @@ public class MainActivity extends BridgeActivity {
 
     private String nameFromUri(Uri uri) {
         String last = uri.getLastPathSegment();
-        return last == null ? "book" : last;
+        return isUsableName(last) ? last : "book";
     }
 }
