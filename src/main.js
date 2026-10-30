@@ -4,6 +4,8 @@ import './styles/index.css';
 import './reader/controls.js';
 import './reader/companion.js';
 
+import { Capacitor } from '@capacitor/core';
+
 import { addFile } from './app/books.js';
 import { addEpubFile } from './app/epub-books.js';
 import {
@@ -41,6 +43,34 @@ fileInput.addEventListener('change', e => {
   const f = e.target.files[0];
   e.target.value = '';
   handleFile(f);
+});
+
+async function handleNativeFile(detail) {
+  if (!detail) return;
+  if (detail.error) {
+    const { toast } = await import('./lib/utils.js');
+    toast(detail.error, 6000);
+    return;
+  }
+  if (!detail.url) return;
+
+  try {
+    const url = Capacitor.convertFileSrc(detail.url);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Could not open the selected file.');
+
+    const blob = await response.blob();
+    const type = detail.type || blob.type || 'application/octet-stream';
+    const file = new File([blob], detail.name || 'book', { type });
+    handleFile(file);
+  } catch (e) {
+    const { toast } = await import('./lib/utils.js');
+    toast(e?.message || 'Could not open the selected file.', 6000);
+  }
+}
+
+window.addEventListener('inkworlds-native-file', e => {
+  handleNativeFile(e.detail);
 });
 
 let dragDepth = 0;
