@@ -21,7 +21,6 @@ import java.io.InputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String FILE_EVENT = "inkworlds-native-file";
-    private static final long WEB_APP_SETTLE_MS = 1200;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -38,12 +37,8 @@ public class MainActivity extends BridgeActivity {
             View icon = splashView.getIconView();
 
             if (icon == null) {
-                splashView.getView()
-                    .animate()
-                    .alpha(0f)
-                    .setDuration(350)
-                    .withEndAction(splashView::remove)
-                    .start();
+                splashView.getView().animate().alpha(0f).setDuration(350)
+                    .withEndAction(splashView::remove).start();
                 return;
             }
 
@@ -51,37 +46,15 @@ public class MainActivity extends BridgeActivity {
             icon.setScaleX(0.72f);
             icon.setScaleY(0.72f);
 
-            icon.animate()
-                .alpha(1f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(420)
+            icon.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(420)
                 .setInterpolator(new OvershootInterpolator(1.15f))
-                .withEndAction(() ->
-                    icon.animate()
-                        .scaleX(1.055f)
-                        .scaleY(1.055f)
-                        .setDuration(160)
+                .withEndAction(() -> icon.animate().scaleX(1.055f).scaleY(1.055f).setDuration(160)
+                    .setInterpolator(new AccelerateDecelerateInterpolator())
+                    .withEndAction(() -> icon.animate().scaleX(1f).scaleY(1f).setDuration(180)
                         .setInterpolator(new AccelerateDecelerateInterpolator())
-                        .withEndAction(() ->
-                            icon.animate()
-                                .scaleX(1f)
-                                .scaleY(1f)
-                                .setDuration(180)
-                                .setInterpolator(new AccelerateDecelerateInterpolator())
-                                .withEndAction(() ->
-                                    icon.animate()
-                                        .alpha(0f)
-                                        .setDuration(300)
-                                        .setInterpolator(new AccelerateDecelerateInterpolator())
-                                        .withEndAction(splashView::remove)
-                                        .start()
-                                )
-                                .start()
-                        )
-                        .start()
-                )
-                .start();
+                        .withEndAction(() -> icon.animate().alpha(0f).setDuration(300)
+                            .setInterpolator(new AccelerateDecelerateInterpolator())
+                            .withEndAction(splashView::remove).start()).start()).start()).start();
         });
 
         super.onCreate(savedInstanceState);
@@ -105,9 +78,13 @@ public class MainActivity extends BridgeActivity {
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
 
-        String name = queryDisplayName(uri);
-        if (name == null || name.isEmpty()) name = nameFromUri(uri);
-        if (name == null || name.isEmpty()) name = "book";
+        // Some providers (notably messaging apps) expose an internal name such as
+        // DOC000233.pdf. Prefer the title carried by the VIEW intent when available.
+        String name = intent.getStringExtra(Intent.EXTRA_TITLE);
+        if (isUsableName(name)) name = ensureExtension(name, mime);
+        else name = queryDisplayName(uri);
+        if (!isUsableName(name)) name = nameFromUri(uri);
+        if (!isUsableName(name)) name = "book";
 
         final String finalMime = mime;
         final String finalName = name;
@@ -137,10 +114,22 @@ public class MainActivity extends BridgeActivity {
         }).start();
     }
 
+    private boolean isUsableName(String name) {
+        if (name == null || name.trim().isEmpty()) return false;
+        String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
+        return !base.matches("(?i)(DOC|DOCUMENT)[_-]?\\d+") && !base.matches("(?i)IMG[_-]?\\d+");
+    }
+
+    private String ensureExtension(String name, String mime) {
+        if (name.matches("(?i).*\\.[A-Za-z0-9]{2,5}$")) return name;
+        if ("application/pdf".equals(mime)) return name + ".pdf";
+        if ("application/epub+zip".equals(mime)) return name + ".epub";
+        if ("text/plain".equals(mime)) return name + ".txt";
+        return name;
+    }
+
     private void dispatchFile(File file, String name, String mime) {
         dispatchWhenReady(() -> {
-            // Pass the native file path, not a file:// URI. Capacitor's local
-            // server converts this path into a WebView-readable localhost URL.
             String nativePath = file.getAbsolutePath();
             String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(nativePath) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
             getBridge().getWebView().evaluateJavascript(js, null);
@@ -163,15 +152,10 @@ public class MainActivity extends BridgeActivity {
             if (getBridge() != null && getBridge().getWebView() != null) {
                 String url = getBridge().getWebView().getUrl();
                 if (url != null && url.contains("localhost")) {
-                    // On a cold launch the WebView can report localhost before
-                    // main.js has registered the native-file listener. Give the
-                    // web app a moment to finish booting so the initial intent is
-                    // not lost. This is Android-only; the website is unchanged.
-                    mainHandler.postDelayed(action, WEB_APP_SETTLE_MS);
+                    action.run();
                     return;
                 }
             }
-
             if (attempt < 50) {
                 mainHandler.postDelayed(() -> dispatchWhenReady(action, attempt + 1), 200);
             }
