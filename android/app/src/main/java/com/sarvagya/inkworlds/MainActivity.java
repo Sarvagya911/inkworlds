@@ -80,10 +80,10 @@ public class MainActivity extends BridgeActivity {
         if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
         if (mime == null) mime = "";
 
-        // For ACTION_VIEW, the provider's actual display name is the safest source
-        // for the filename. EXTRA_TITLE can be a document/URI identifier (and in
-        // some apps is UUID-like), which must never replace the real book filename.
-        String name = firstUsableName(
+        // Prefer a real display filename. Some providers put a UUID in one of the
+        // intent fields, so a UUID is only a last-resort transport name, never the
+        // preferred human-readable filename.
+        String name = firstPreferredName(
             queryDisplayName(uri),
             intent.getStringExtra(Intent.EXTRA_TITLE),
             intent.getStringExtra(Intent.EXTRA_SUBJECT),
@@ -92,9 +92,6 @@ public class MainActivity extends BridgeActivity {
         if (!isUsableName(name)) name = "book";
         name = ensureExtension(name, mime);
 
-        // Some Android providers can deliver the same ACTION_VIEW intent more than once
-        // during a cold start. The URI itself identifies the selected document, so do not
-        // include the display name in the duplicate key.
         String intentKey = intent.getAction() + "|" + uri + "|" + mime;
         long now = SystemClock.uptimeMillis();
         if (intentKey.equals(lastFileIntentKey) && now - lastFileIntentAt < 5000L) return;
@@ -129,7 +126,13 @@ public class MainActivity extends BridgeActivity {
         }).start();
     }
 
-    private String firstUsableName(String... candidates) {
+    private String firstPreferredName(String... candidates) {
+        // First pass: real human-readable names only.
+        for (String candidate : candidates) {
+            if (isUsableName(candidate) && !isUuidName(candidate)) return candidate.trim();
+        }
+        // Second pass: preserve a provider name rather than replacing it with
+        // "book". The web importer can still prefer embedded PDF metadata.
         for (String candidate : candidates) {
             if (isUsableName(candidate)) return candidate.trim();
         }
@@ -141,8 +144,13 @@ public class MainActivity extends BridgeActivity {
         String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
         return !base.matches("(?i)(DOC|DOCUMENT)[ _-]?\\d+.*")
             && !base.matches("(?i)IMG[_ -]?\\d+.*")
-            && !base.matches("(?i)WA[_ -]?\\d+.*")
-            && !base.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}");
+            && !base.matches("(?i)WA[_ -]?\\d+.*");
+    }
+
+    private boolean isUuidName(String name) {
+        if (name == null) return false;
+        String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
+        return base.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}");
     }
 
     private String ensureExtension(String name, String mime) {
