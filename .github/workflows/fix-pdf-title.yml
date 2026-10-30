@@ -1,0 +1,51 @@
+name: One-time PDF title fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch PDF metadata title handling
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/app/books.js')
+          text = path.read_text(encoding='utf-8')
+
+          old_manga = """      const mt =\n        (\n          info.Title || ''\n        ).trim();\n\n\n      title =\n        mt.length > 2 &&\n        !/^untitled|\\.pdf$|^microsoft|^document/i.test(\n          mt\n        )\n          ? mt\n          : '';"""
+
+          new_manga = """      const mt =\n        (\n          info.Title || ''\n        ).trim();\n\n\n      const cleanMetaTitle =\n        mt.replace(/\\.pdf$/i, '').trim();\n\n      const genericPdfTitle =\n        /^(untitled|microsoft|document|doc[_ -]?\\d+|document[_ -]?\\d+|img[_ -]?\\d+|wa[_ -]?\\d+)$/i\n          .test(cleanMetaTitle);\n\n      title =\n        cleanMetaTitle.length > 2 &&\n        !genericPdfTitle\n          ? cleanMetaTitle\n          : '';"""
+
+          old_normal = """      const mt =\n        (\n          r.title || ''\n        ).trim();\n\n\n      title =\n        mt.length > 2 &&\n        !/^untitled|\\.pdf$|^microsoft|^document/i.test(\n          mt\n        )\n          ? mt\n          : '';"""
+
+          new_normal = """      const mt =\n        (\n          r.title || ''\n        ).trim();\n\n\n      const cleanMetaTitle =\n        mt.replace(/\\.pdf$/i, '').trim();\n\n      const genericPdfTitle =\n        /^(untitled|microsoft|document|doc[_ -]?\\d+|document[_ -]?\\d+|img[_ -]?\\d+|wa[_ -]?\\d+)$/i\n          .test(cleanMetaTitle);\n\n      title =\n        cleanMetaTitle.length > 2 &&\n        !genericPdfTitle\n          ? cleanMetaTitle\n          : '';"""
+
+          if text.count(old_manga) != 1:
+              raise SystemExit(f'Manga title block count was {text.count(old_manga)}, expected 1')
+          if text.count(old_normal) != 1:
+              raise SystemExit(f'Normal title block count was {text.count(old_normal)}, expected 1')
+
+          text = text.replace(old_manga, new_manga, 1)
+          text = text.replace(old_normal, new_normal, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit fix and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/books.js
+          git rm .github/workflows/fix-pdf-title.yml
+          git commit -m "Fix generic PDF metadata titles"
+          git push
