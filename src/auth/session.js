@@ -8,6 +8,34 @@ export const listeners = new Set();
 export const onAuthChange = fn => listeners.add(fn);
 
 export const AFTER = 'iw:after';
+const OFFLINE_USER = 'iw:offline-user';
+
+function cachedUser() {
+  try {
+    const raw = localStorage.getItem(OFFLINE_USER);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function rememberUser(u) {
+  try {
+    if (u) {
+      localStorage.setItem(
+        OFFLINE_USER,
+        JSON.stringify({
+          id: u.id,
+          email: u.email || null,
+          user_metadata: u.user_metadata || {},
+          app_metadata: u.app_metadata || {}
+        })
+      );
+    } else {
+      localStorage.removeItem(OFFLINE_USER);
+    }
+  } catch (e) {}
+}
 
 export function rememberDestination(hash) {
   try {
@@ -27,6 +55,7 @@ export function destination() {
 export async function setUser(u) {
   const changed = (u && u.id) !== (session.user && session.user.id);
   session.user = u;
+  rememberUser(u);
   if (u) {
     try {
       await loadProfile();
@@ -39,8 +68,19 @@ export async function initAuth() {
   if (!supabase) return;
   try {
     const { data } = await supabase.auth.getSession();
-    await setUser(data.session ? data.session.user : null);
-  } catch (e) {}
+    if (data.session) {
+      await setUser(data.session.user);
+    } else {
+      // If the network is unavailable and Supabase cannot restore its
+      // session, keep the last known identity so the local app remains usable.
+      const cached = cachedUser();
+      if (cached) await setUser(cached);
+      else await setUser(null);
+    }
+  } catch (e) {
+    const cached = cachedUser();
+    if (cached) await setUser(cached);
+  }
   supabase.auth.onAuthStateChange((event, s) => {
     // Supabase recommends not awaiting other calls inside this callback.
     setTimeout(async () => {
@@ -63,4 +103,7 @@ export async function initAuth() {
 
 export async function signOut() {
   if (supabase) await supabase.auth.signOut();
+  rememberUser(null);
+  session.user = null;
+  session.profile = null;
 }
