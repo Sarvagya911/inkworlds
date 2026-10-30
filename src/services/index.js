@@ -7,3 +7,21 @@ export * from './communities.js';
 export * from './comments.js';
 export * from './ai.js';
 export * from './account.js';
+
+// Explicit exports from the offline layer override the same named star exports above.
+export {
+  myBooks,
+  bookMeta,
+  createBook,
+  getProgress,
+  allProgress,
+  highlights,
+  addHighlight,
+  updateHighlight,
+  deleteHighlight,
+  bookmarks,
+  addBookmark,
+  deleteBookmark,
+  addReading,
+  readingDays
+} from './offline.js';
