@@ -8,6 +8,7 @@ import './reader/controls.js';
 import './reader/companion.js';
 
 import { addFile } from './app/books.js';
+import { addEpubFile } from './app/epub-books.js';
 import {
   renderAccountChip,
   route
@@ -34,15 +35,23 @@ import { session } from './services/session.js';
 import { primeOfflineCache } from './services/index.js';
 import { initNativeApp } from './native/app.js';
 
+function handleFile(file) {
+  if (!file) return;
+  if (/\.epub$/i.test(file.name) || file.type === 'application/epub+zip') {
+    addEpubFile(file);
+    return;
+  }
+  addFile(file);
+}
+
 $('fileIn').addEventListener(
   'change',
   e => {
-    const f =
-      e.target.files[0];
+    const f = e.target.files[0];
 
     e.target.value = '';
 
-    addFile(f);
+    handleFile(f);
   }
 );
 
@@ -109,7 +118,7 @@ addEventListener(
       e.dataTransfer?.files?.[0];
 
     if (f) {
-      addFile(f);
+      handleFile(f);
     }
   }
 );
