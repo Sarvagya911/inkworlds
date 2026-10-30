@@ -153,6 +153,107 @@ function pickExternalContentType(fileName, mimeType) {
   });
 }
 
+function looksLikeTransportName(name) {
+  const base = (name || '')
+    .trim()
+    .replace(/\.[^.]+$/, '')
+    .replace(/[{}]/g, '');
+
+  return /^[0-9a-f]{8}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{12}$/i.test(base)
+    || /^(?:DOC|DOCUMENT|IMG|WA)[ _-]?\d+/i.test(base);
+}
+
+function usablePdfTitle(title) {
+  const value = (title || '').replace(/\s+/g, ' ').trim();
+  if (value.length < 3 || value.length > 160) return '';
+  if (/\.pdf$/i.test(value)) return value.replace(/\.pdf$/i, '').trim();
+  if (/^(?:untitled|microsoft|document|img|wa|doc(?:ument)?)(?:[ _-]*\d+.*)?$/i.test(value)) return '';
+  if (looksLikeTransportName(value)) return '';
+  return value;
+}
+
+async function inferPdfTitle(blob) {
+  try {
+    const { loadPdfJs } = await import('./engine/parser/pdf.js');
+    await loadPdfJs();
+
+    const pdf = await window.pdfjsLib.getDocument({
+      data: new Uint8Array(await blob.arrayBuffer()),
+      isEvalSupported: false
+    }).promise;
+
+    try {
+      const info = (await pdf.getMetadata()).info || {};
+      const metadataTitle = usablePdfTitle(info.Title);
+      if (metadataTitle) return metadataTitle;
+
+      const maxPages = Math.min(pdf.numPages, 4);
+      let best = null;
+
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        try {
+          const tc = await page.getTextContent();
+          const lines = [];
+          let current = null;
+
+          const flush = () => {
+            if (!current || !current.text.trim()) return;
+            current.text = current.text.replace(/\s+/g, ' ').trim();
+            lines.push(current);
+            current = null;
+          };
+
+          for (const item of tc.items || []) {
+            if (typeof item.str !== 'string' || !item.str.trim()) continue;
+            const x = item.transform?.[4] || 0;
+            const y = item.transform?.[5] || 0;
+            const h = Math.abs(item.transform?.[3] || item.height || 10);
+
+            if (current && Math.abs(y - current.y) > h * 0.45) flush();
+            if (!current) current = { text: '', x, y, maxH: h, endX: x };
+
+            if (
+              current.text &&
+              !/\s$/.test(current.text) &&
+              !/^\s/.test(item.str) &&
+              x - current.endX > h * 0.15
+            ) current.text += ' ';
+
+            current.text += item.str;
+            current.endX = Math.max(current.endX, x + (item.width || 0));
+            current.maxH = Math.max(current.maxH, h);
+          }
+          flush();
+
+          for (const line of lines) {
+            const text = usablePdfTitle(line.text);
+            if (!text) continue;
+            if (/^(?:chapter|contents|table of contents|copyright|isbn|published by|by\b)/i.test(text)) continue;
+            if (/^\d{1,4}$/.test(text)) continue;
+
+            let score = line.maxH * 10;
+            if (pageNumber === 1) score += 8;
+            if (text.length >= 5 && text.length <= 70) score += 5;
+            if (text.split(/\s+/).length >= 2) score += 3;
+            if (/^[A-Z0-9 .,'’'&-]+$/.test(text)) score += 2;
+
+            if (!best || score > best.score) best = { score, text };
+          }
+        } finally {
+          page.cleanup();
+        }
+      }
+
+      return best?.text || '';
+    } finally {
+      await pdf.destroy();
+    }
+  } catch (_) {
+    return '';
+  }
+}
+
 async function handleNativeFile(detail) {
   if (!detail) return;
   if (detail.error) {
@@ -176,7 +277,18 @@ async function handleNativeFile(detail) {
 
     const blob = await response.blob();
     const type = detail.type || blob.type || 'application/octet-stream';
-    const file = new File([blob], detail.name || 'book', { type });
+    let importName = detail.name || 'book';
+
+    // WhatsApp/Android providers can expose a transport UUID instead of the
+    // real filename. For PDFs, recover the title from embedded metadata or the
+    // document's title page before handing the file to the normal importer.
+    if (type === 'application/pdf' && looksLikeTransportName(importName)) {
+      const inferredTitle = await inferPdfTitle(blob);
+      if (inferredTitle) importName = `${inferredTitle}.pdf`;
+      else importName = 'Untitled Book.pdf';
+    }
+
+    const file = new File([blob], importName, { type });
     const isEpub = /\.epub$/i.test(file.name) || file.type === 'application/epub+zip';
 
     // External Android imports use the user's explicit choice. Keep it selected
