@@ -138,7 +138,10 @@ public class MainActivity extends BridgeActivity {
 
     private void dispatchFile(File file, String name, String mime) {
         dispatchWhenReady(() -> {
-            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(file.toURI().toString()) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
+            // Pass the native file path, not a file:// URI. Capacitor's local
+            // server converts this path into a WebView-readable localhost URL.
+            String nativePath = file.getAbsolutePath();
+            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(nativePath) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
             getBridge().getWebView().evaluateJavascript(js, null);
         });
     }
