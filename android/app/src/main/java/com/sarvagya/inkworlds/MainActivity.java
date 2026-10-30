@@ -1,5 +1,7 @@
 package com.sarvagya.inkworlds;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.View;
@@ -10,7 +12,13 @@ import androidx.core.splashscreen.SplashScreen;
 
 import com.getcapacitor.BridgeActivity;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+
 public class MainActivity extends BridgeActivity {
+
+    private static final String FILE_EVENT = "inkworlds-native-file";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,5 +81,84 @@ public class MainActivity extends BridgeActivity {
         });
 
         super.onCreate(savedInstanceState);
+        handleFileIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleFileIntent(intent);
+    }
+
+    private void handleFileIntent(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+
+        Uri uri = intent.getData();
+        if (uri == null) return;
+
+        String mime = intent.getType();
+        if (mime == null || mime.isEmpty()) mime = getContentResolver().getType(uri);
+        if (mime == null) mime = "";
+
+        String name = queryDisplayName(uri);
+        if (name == null || name.isEmpty()) name = nameFromUri(uri);
+        if (name == null || name.isEmpty()) name = "book";
+
+        final String finalMime = mime;
+        final String finalName = name;
+
+        new Thread(() -> {
+            try {
+                File dir = new File(getCacheDir(), "incoming");
+                if (!dir.exists()) dir.mkdirs();
+
+                String safeName = finalName.replaceAll("[^A-Za-z0-9._-]", "_");
+                File out = new File(dir, System.currentTimeMillis() + "-" + safeName);
+
+                try (InputStream in = getContentResolver().openInputStream(uri);
+                     FileOutputStream fos = new FileOutputStream(out)) {
+                    if (in == null) throw new IllegalStateException("Unable to open selected file.");
+                    byte[] buffer = new byte[64 * 1024];
+                    int n;
+                    while ((n = in.read(buffer)) != -1) fos.write(buffer, 0, n);
+                }
+
+                dispatchFile(out, finalName, finalMime);
+            } catch (Exception e) {
+                dispatchError(e.getMessage() == null ? "Could not open the selected file." : e.getMessage());
+            }
+        }).start();
+    }
+
+    private void dispatchFile(File file, String name, String mime) {
+        runOnUiThread(() -> {
+            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(file.toURI().toString()) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
+            getBridge().getWebView().evaluateJavascript(js, null);
+        });
+    }
+
+    private void dispatchError(String message) {
+        runOnUiThread(() -> {
+            String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{error:" + js(message) + "}}));";
+            getBridge().getWebView().evaluateJavascript(js, null);
+        });
+    }
+
+    private String js(String value) {
+        if (value == null) return "null";
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r") + "\"";
+    }
+
+    private String queryDisplayName(Uri uri) {
+        try (android.database.Cursor c = getContentResolver().query(uri, new String[]{"_display_name"}, null, null, null)) {
+            if (c != null && c.moveToFirst()) return c.getString(0);
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private String nameFromUri(Uri uri) {
+        String last = uri.getLastPathSegment();
+        return last == null ? "book" : last;
     }
 }
