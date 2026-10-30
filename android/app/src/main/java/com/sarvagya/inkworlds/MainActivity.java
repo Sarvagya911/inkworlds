@@ -90,8 +90,7 @@ public class MainActivity extends BridgeActivity {
         if (mime == null) mime = "";
 
         // Prefer a real display filename. Some providers put a UUID in one of the
-        // intent fields, so a UUID is only a last-resort transport name, never the
-        // preferred human-readable filename.
+        // intent fields, so a UUID is never used as the web import filename.
         String name = firstPreferredName(
             queryDisplayName(uri),
             intent.getStringExtra(Intent.EXTRA_TITLE),
@@ -154,11 +153,9 @@ public class MainActivity extends BridgeActivity {
         for (String candidate : candidates) {
             if (isUsableName(candidate) && !isUuidName(candidate)) return candidate.trim();
         }
-        // Second pass: preserve a provider name rather than replacing it with
-        // "book". The web importer can still prefer embedded PDF metadata.
-        for (String candidate : candidates) {
-            if (isUsableName(candidate)) return candidate.trim();
-        }
+        // Do not pass transport-generated UUIDs to the web importer. If no
+        // human-readable name exists, the web PDF importer can derive a title
+        // from embedded metadata or the document's title page.
         return null;
     }
 
@@ -173,7 +170,9 @@ public class MainActivity extends BridgeActivity {
     private boolean isUuidName(String name) {
         if (name == null) return false;
         String base = name.trim().replaceFirst("(?i)\\.[^.]+$", "");
-        return base.matches("(?i)[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}");
+        // Accept normal UUIDs as well as provider variants that replace the
+        // hyphens with spaces, such as "F6026360 2722 4566 89d1 2e72b446284e".
+        return base.matches("(?i)[0-9a-f]{8}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{12}");
     }
 
     private String ensureExtension(String name, String mime) {
