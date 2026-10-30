@@ -646,7 +646,7 @@ export async function addFile(file) {
         mt.replace(/\.pdf$/i, '').trim();
 
       const genericPdfTitle =
-        /^(untitled|microsoft|document|doc[_ -]?\d+|document[_ -]?\d+|img[_ -]?\d+|wa[_ -]?\d+)$/i
+        /^(untitled|microsoft|document|img|wa|doc(?:ument)?)(?:[ _-]*\d+.*)?$/i
           .test(cleanMetaTitle);
 
       title =
@@ -851,7 +851,7 @@ export async function addFile(file) {
         mt.replace(/\.pdf$/i, '').trim();
 
       const genericPdfTitle =
-        /^(untitled|microsoft|document|doc[_ -]?\d+|document[_ -]?\d+|img[_ -]?\d+|wa[_ -]?\d+)$/i
+        /^(untitled|microsoft|document|img|wa|doc(?:ument)?)(?:[ _-]*\d+.*)?$/i
           .test(cleanMetaTitle);
 
       title =
