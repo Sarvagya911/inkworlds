@@ -3,6 +3,8 @@ package com.sarvagya.inkworlds;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
@@ -19,6 +21,7 @@ import java.io.InputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String FILE_EVENT = "inkworlds-native-file";
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,17 +135,34 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void dispatchFile(File file, String name, String mime) {
-        runOnUiThread(() -> {
+        dispatchWhenReady(() -> {
             String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{url:" + js(file.toURI().toString()) + ",name:" + js(name) + ",type:" + js(mime) + "}}));";
             getBridge().getWebView().evaluateJavascript(js, null);
         });
     }
 
     private void dispatchError(String message) {
-        runOnUiThread(() -> {
+        dispatchWhenReady(() -> {
             String js = "window.dispatchEvent(new CustomEvent('" + FILE_EVENT + "',{detail:{error:" + js(message) + "}}));";
             getBridge().getWebView().evaluateJavascript(js, null);
         });
+    }
+
+    private void dispatchWhenReady(Runnable action) {
+        dispatchWhenReady(action, 0);
+    }
+
+    private void dispatchWhenReady(Runnable action, int attempt) {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            String url = getBridge().getWebView().getUrl();
+            if (url != null && url.contains("localhost")) {
+                action.run();
+                return;
+            }
+        }
+        if (attempt < 50) {
+            mainHandler.postDelayed(() -> dispatchWhenReady(action, attempt + 1), 200);
+        }
     }
 
     private String js(String value) {
