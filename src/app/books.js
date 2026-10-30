@@ -76,7 +76,7 @@
 //     .replace(/^./, c => c.toUpperCase());
 // }
 
-// export async function addFile(file) {
+// export async function addFile(file, options = {}) {
 //   if (!file) return;
 //   if (!signedIn()) {
 //     rememberDestination('#/library');
@@ -563,6 +563,11 @@ export async function addFile(file) {
 
     let chapters = [];
 
+    const preferredTitle =
+      (options.preferredTitle || '')
+        .replace(/\.[^.]+$/, '')
+        .trim();
+
 
     /*
      * =====================================================
@@ -654,6 +659,10 @@ export async function addFile(file) {
         !genericPdfTitle
           ? cleanMetaTitle
           : '';
+
+      if (preferredTitle.length > 2) {
+        title = preferredTitle;
+      }
 
 
       author =
@@ -859,6 +868,10 @@ export async function addFile(file) {
         !genericPdfTitle
           ? cleanMetaTitle
           : '';
+
+      if (preferredTitle.length > 2) {
+        title = preferredTitle;
+      }
 
 
       author =
