@@ -1,12 +1,16 @@
 // Explicit offline downloads. Normal books/EPUBs are already normalized to chapter data,
-// so downloading simply warms the same IndexedDB cache used by the reader.
+// so downloading warms the same IndexedDB cache used by the reader.
 import { Cache } from '../lib/cache.js';
 import { bookText } from './books.js';
 
 const key = id => `iw:downloaded:${id}`;
 
 export function isDownloaded(id) {
-  try { return localStorage.getItem(key(id)) === '1'; } catch (e) { return false; }
+  try {
+    return localStorage.getItem(key(id)) === '1';
+  } catch (e) {
+    return false;
+  }
 }
 
 function mark(id, value) {
@@ -39,7 +43,6 @@ export async function downloadBook(meta, onProgress = () => {}) {
 
 export async function removeDownload(id) {
   if (!id) return;
-  const hit = await Cache.get(id);
-  if (hit) await Cache.put({ ...hit, downloaded: false });
+  await Cache.del(id);
   mark(id, false);
 }
