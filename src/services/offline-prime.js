@@ -1,5 +1,5 @@
 // Bootstraps the local offline cache from Supabase while the account is online.
-import * as booksCloud from './books.js';
+import * as libraryCloud from './library.js';
 import * as readingCloud from './reading.js';
 import { myId } from './session.js';
 
@@ -13,7 +13,7 @@ export async function primeOfflineCache() {
   if (!myId() || navigator.onLine === false) return;
 
   try {
-    const books = await booksCloud.myBooks();
+    const books = await libraryCloud.myBooks();
     set('library', books || []);
 
     const [progress, days] = await Promise.all([
