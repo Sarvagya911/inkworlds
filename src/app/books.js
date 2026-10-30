@@ -642,12 +642,17 @@ export async function addFile(file) {
         ).trim();
 
 
+      const cleanMetaTitle =
+        mt.replace(/\.pdf$/i, '').trim();
+
+      const genericPdfTitle =
+        /^(untitled|microsoft|document|doc[_ -]?\d+|document[_ -]?\d+|img[_ -]?\d+|wa[_ -]?\d+)$/i
+          .test(cleanMetaTitle);
+
       title =
-        mt.length > 2 &&
-        !/^untitled|\.pdf$|^microsoft|^document/i.test(
-          mt
-        )
-          ? mt
+        cleanMetaTitle.length > 2 &&
+        !genericPdfTitle
+          ? cleanMetaTitle
           : '';
 
 
@@ -842,12 +847,17 @@ export async function addFile(file) {
         ).trim();
 
 
+      const cleanMetaTitle =
+        mt.replace(/\.pdf$/i, '').trim();
+
+      const genericPdfTitle =
+        /^(untitled|microsoft|document|doc[_ -]?\d+|document[_ -]?\d+|img[_ -]?\d+|wa[_ -]?\d+)$/i
+          .test(cleanMetaTitle);
+
       title =
-        mt.length > 2 &&
-        !/^untitled|\.pdf$|^microsoft|^document/i.test(
-          mt
-        )
-          ? mt
+        cleanMetaTitle.length > 2 &&
+        !genericPdfTitle
+          ? cleanMetaTitle
           : '';
 
 
