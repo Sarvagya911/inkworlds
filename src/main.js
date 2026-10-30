@@ -31,6 +31,7 @@ import {
 
 import { cur } from './reader/reader.js';
 import { session } from './services/session.js';
+import { primeOfflineCache } from './services/index.js';
 import { initNativeApp } from './native/app.js';
 
 $('fileIn').addEventListener(
@@ -148,6 +149,12 @@ onAuthChange(
       // Cloud sync is secondary to making the app usable.
       // Never let a network outage block the local app shell.
       syncProgressDown().catch(() => {});
+
+      // While online, take a complete snapshot of the user's library,
+      // progress, stats, highlights and bookmarks for the next offline run.
+      if (navigator.onLine !== false) {
+        primeOfflineCache().catch(() => {});
+      }
     }
 
     if (
