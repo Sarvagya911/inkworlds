@@ -21,6 +21,7 @@ import java.io.InputStream;
 public class MainActivity extends BridgeActivity {
 
     private static final String FILE_EVENT = "inkworlds-native-file";
+    private static final long WEB_APP_SETTLE_MS = 1200;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -162,7 +163,11 @@ public class MainActivity extends BridgeActivity {
             if (getBridge() != null && getBridge().getWebView() != null) {
                 String url = getBridge().getWebView().getUrl();
                 if (url != null && url.contains("localhost")) {
-                    action.run();
+                    // On a cold launch the WebView can report localhost before
+                    // main.js has registered the native-file listener. Give the
+                    // web app a moment to finish booting so the initial intent is
+                    // not lost. This is Android-only; the website is unchanged.
+                    mainHandler.postDelayed(action, WEB_APP_SETTLE_MS);
                     return;
                 }
             }
