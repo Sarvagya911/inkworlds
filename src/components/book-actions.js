@@ -1,7 +1,7 @@
 import { getBook } from '../app/books.js';
-import { rememberDestination } from '../auth/session.js';
-import { addToLibrary, downloadBook, isDownloaded } from '../services/index.js';
 import { signedIn } from '../app/helpers.js';
+import { rememberDestination } from '../auth/session.js';
+import { addToLibrary, downloadBook, isDownloaded, myLibraryIds } from '../services/index.js';
 import { toast } from '../lib/utils.js';
 
 let mountedFor = '';
@@ -29,7 +29,7 @@ const buttonStyle = `
 `;
 
 export async function mountBookActions(id) {
-  if (mountedFor === id) return;
+  if (mountedFor === id && document.querySelector('.book-utility-actions')) return;
 
   const host = document.querySelector('.book-grid .actions');
   if (!host) return;
@@ -41,6 +41,9 @@ export async function mountBookActions(id) {
   if (meta.sample) return;
 
   mountedFor = id;
+
+  const libraryIds = meta.own ? [] : await myLibraryIds().catch(() => []);
+  let inLibrary = !!meta.own || libraryIds.includes(id);
 
   const wrap = document.createElement('div');
   wrap.className = 'book-utility-actions';
@@ -54,8 +57,8 @@ export async function mountBookActions(id) {
         id="bookLibraryAction"
         type="button"
         style="${buttonStyle}"
-        aria-label="Add this book to your library"
-      >＋ Add to library</button>
+        aria-label="${inLibrary ? 'Book is in your library' : 'Add this book to your library'}"
+      >${inLibrary ? '✓ In your library' : '＋ Add to library'}</button>
     `);
   }
 
@@ -73,7 +76,6 @@ export async function mountBookActions(id) {
 
   const libraryButton = wrap.querySelector('#bookLibraryAction');
   const downloadButton = wrap.querySelector('#bookDownloadAction');
-  let inLibrary = !!meta.own;
 
   const paintDownload = () => {
     const downloaded = isDownloaded(id);
@@ -82,9 +84,7 @@ export async function mountBookActions(id) {
       : '↓ Download for offline';
     downloadButton.setAttribute(
       'aria-label',
-      downloaded
-        ? 'Remove offline copy'
-        : 'Download this book for offline reading'
+      downloaded ? 'Remove offline copy' : 'Download this book for offline reading'
     );
   };
 
@@ -92,23 +92,24 @@ export async function mountBookActions(id) {
     libraryButton.addEventListener('mouseenter', () => (libraryButton.style.opacity = '1'));
     libraryButton.addEventListener('mouseleave', () => (libraryButton.style.opacity = '.78'));
     libraryButton.addEventListener('click', async () => {
-      if (!meta.own && !inLibrary) {
-        if (!signedIn()) {
-          rememberDestination(location.hash);
-          location.hash = '#/signin';
-          return;
-        }
-        libraryButton.disabled = true;
-        try {
-          await addToLibrary(id);
-          inLibrary = true;
-          libraryButton.textContent = '✓ In your library';
-          toast('Added to your library.');
-        } catch (e) {
-          toast(e?.message || 'Could not add this book to your library.');
-        } finally {
-          libraryButton.disabled = false;
-        }
+      if (inLibrary) return;
+      if (!signedIn()) {
+        rememberDestination(location.hash);
+        location.hash = '#/signin';
+        return;
+      }
+
+      libraryButton.disabled = true;
+      try {
+        await addToLibrary(id);
+        inLibrary = true;
+        libraryButton.textContent = '✓ In your library';
+        libraryButton.setAttribute('aria-label', 'Book is in your library');
+        toast('Added to your library.');
+      } catch (e) {
+        toast(e?.message || 'Could not add this book to your library.');
+      } finally {
+        libraryButton.disabled = false;
       }
     });
   }
@@ -127,7 +128,10 @@ export async function mountBookActions(id) {
       if (!inLibrary && !meta.own) {
         await addToLibrary(id);
         inLibrary = true;
-        if (libraryButton) libraryButton.textContent = '✓ In your library';
+        if (libraryButton) {
+          libraryButton.textContent = '✓ In your library';
+          libraryButton.setAttribute('aria-label', 'Book is in your library');
+        }
       }
 
       if (isDownloaded(id)) {
