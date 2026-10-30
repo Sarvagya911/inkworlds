@@ -1,6 +1,7 @@
 import { getBook } from '../app/books.js';
 import { rememberDestination } from '../auth/session.js';
 import { addToLibrary, downloadBook, isDownloaded } from '../services/index.js';
+import { signedIn } from '../app/helpers.js';
 import { toast } from '../lib/utils.js';
 
 let mountedFor = '';
@@ -92,7 +93,7 @@ export async function mountBookActions(id) {
     libraryButton.addEventListener('mouseleave', () => (libraryButton.style.opacity = '.78'));
     libraryButton.addEventListener('click', async () => {
       if (!meta.own && !inLibrary) {
-        if (!window.__inkworldsSignedIn?.()) {
+        if (!signedIn()) {
           rememberDestination(location.hash);
           location.hash = '#/signin';
           return;
@@ -115,7 +116,7 @@ export async function mountBookActions(id) {
   downloadButton.addEventListener('mouseenter', () => (downloadButton.style.opacity = '1'));
   downloadButton.addEventListener('mouseleave', () => (downloadButton.style.opacity = '.78'));
   downloadButton.addEventListener('click', async () => {
-    if (!window.__inkworldsSignedIn?.()) {
+    if (!signedIn()) {
       rememberDestination(location.hash);
       location.hash = '#/signin';
       return;
