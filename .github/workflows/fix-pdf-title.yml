@@ -1,0 +1,55 @@
+name: Fix PDF metadata titles
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Patch PDF title handling
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/app/books.js')
+          text = path.read_text(encoding='utf-8')
+
+          old = """const mt = (r.title || '').trim();
+          title = mt.length > 2 && !/^untitled|\\.pdf$|^microsoft|^document/i.test(mt) ? mt : '';"""
+          new = """const mt = (r.title || '').trim();
+          const cleanMetaTitle = mt.replace(/\\.pdf$/i, '').trim();
+          const genericPdfTitle =
+            /^(untitled|microsoft|document|doc[_ -]?\\d+|document[_ -]?\\d+|img[_ -]?\\d+|wa[_ -]?\\d+)$/i
+              .test(cleanMetaTitle);
+          title =
+            cleanMetaTitle.length > 2 && !genericPdfTitle
+              ? cleanMetaTitle
+              : '';"""
+
+          if old not in text:
+              raise SystemExit('Expected PDF title block was not found; refusing to modify the file.')
+
+          text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit fix and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/books.js .github/workflows/fix-pdf-title.yml
+          git commit -m "fix: use filename for generated PDF titles"
+          git rm .github/workflows/fix-pdf-title.yml
+          git commit -m "chore: remove temporary PDF title workflow"
+          git push origin HEAD:main
