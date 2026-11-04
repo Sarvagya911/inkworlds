@@ -2,13 +2,14 @@ import { cur } from './reader.js';
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 const canSpeak = !!(synth && typeof window.SpeechSynthesisUtterance === 'function');
-const STORAGE_PREFIX = 'iw:narration:';
-const CHUNK_LIMIT = 400;
+const STORAGE_PREFIX = 'iw:narration:v2:';
+const CHUNK_LIMIT = 900;
 
 let paragraphs = [];
 let chunks = [];
 let chunkIndex = 0;
 let utterance = null;
+let utteranceToken = 0;
 let playing = false;
 let voices = [];
 let activeBookId = null;
@@ -233,7 +234,7 @@ function clearHighlight() {
   paragraphs.forEach(element => element.classList.remove('narration-active'));
 }
 
-function speakCurrent() {
+function speakCurrent(cancelPrevious = true) {
   if (!canSpeak) {
     setStatus('Speech synthesis is not available in this browser.');
     return;
@@ -246,7 +247,8 @@ function speakCurrent() {
     chunkIndex = 0;
   }
 
-  synth.cancel();
+  const token = ++utteranceToken;
+  if (cancelPrevious) synth.cancel();
   const item = chunks[chunkIndex];
   highlightParagraph(item.paragraphIndex);
 
@@ -261,12 +263,12 @@ function speakCurrent() {
     updateProgress();
   };
   utterance.onend = () => {
-    if (!playing) return;
+    if (!playing || token !== utteranceToken) return;
     chunkIndex += 1;
     saveProgress();
     if (chunkIndex < chunks.length) {
       updateProgress();
-      speakCurrent();
+      speakCurrent(false);
     } else {
       playing = false;
       chunkIndex = chunks.length;
@@ -277,7 +279,7 @@ function speakCurrent() {
     }
   };
   utterance.onerror = event => {
-    if (event.error === 'canceled' || event.error === 'interrupted') return;
+    if (token !== utteranceToken || event.error === 'canceled' || event.error === 'interrupted') return;
     playing = false;
     setStatus('Narration stopped. Try another device voice.');
     updateProgress();
@@ -310,6 +312,7 @@ function play() {
 }
 
 function pause() {
+  utteranceToken += 1;
   if (synth) synth.cancel();
   playing = false;
   saveProgress();
