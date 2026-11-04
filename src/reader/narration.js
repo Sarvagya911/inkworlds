@@ -3,7 +3,7 @@ import { cur } from './reader.js';
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 const canSpeak = !!(synth && typeof window.SpeechSynthesisUtterance === 'function');
 const STORAGE_PREFIX = 'iw:narration:';
-const CHUNK_LIMIT = 1800;
+const CHUNK_LIMIT = 400;
 
 let paragraphs = [];
 let chunks = [];
