@@ -272,7 +272,7 @@ function speakCurrent(cancelPrevious = true) {
       // before queuing the next segment, while guarding against pause/skip.
       window.setTimeout(() => {
         if (playing && token === utteranceToken) speakCurrent(false);
-      }, 80);
+      }, 250);
     } else {
       playing = false;
       chunkIndex = chunks.length;
@@ -328,7 +328,14 @@ function pause() {
 
 function restartCurrent() {
   if (!playing) return;
-  speakCurrent();
+  // Chrome may dispatch the canceled utterance's completion asynchronously.
+  // Invalidate it, cancel the old queue, then start the new-rate utterance
+  // after the browser has cleared the previous speech task.
+  utteranceToken += 1;
+  synth.cancel();
+  window.setTimeout(() => {
+    if (playing) speakCurrent(false);
+  }, 180);
 }
 
 function previous() {
