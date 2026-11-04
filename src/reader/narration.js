@@ -10,6 +10,7 @@ let chunks = [];
 let chunkIndex = 0;
 let utterance = null;
 let utteranceToken = 0;
+let currentCharOffset = 0;
 let playing = false;
 let voices = [];
 let activeBookId = null;
@@ -234,7 +235,7 @@ function clearHighlight() {
   paragraphs.forEach(element => element.classList.remove('narration-active'));
 }
 
-function speakCurrent(cancelPrevious = true) {
+function speakCurrent(cancelPrevious = true, startOffset = 0) {
   if (!canSpeak) {
     setStatus('Speech synthesis is not available in this browser.');
     return;
@@ -250,13 +251,21 @@ function speakCurrent(cancelPrevious = true) {
   const token = ++utteranceToken;
   if (cancelPrevious) synth.cancel();
   const item = chunks[chunkIndex];
+  const safeOffset = Math.max(0, Math.min(item.text.length, startOffset));
+  currentCharOffset = safeOffset;
   highlightParagraph(item.paragraphIndex);
 
-  utterance = new SpeechSynthesisUtterance(item.text);
+  utterance = new SpeechSynthesisUtterance(item.text.slice(safeOffset));
   utterance.rate = Number($('narrationRate')?.value || 1);
   const voice = selectedVoice();
   if (voice) utterance.voice = voice;
 
+  utterance.onboundary = event => {
+    if (token !== utteranceToken) return;
+    if (Number.isFinite(event.charIndex)) {
+      currentCharOffset = safeOffset + event.charIndex;
+    }
+  };
   utterance.onstart = () => {
     playing = true;
     setStatus('Narrating with your device voice');
@@ -331,10 +340,11 @@ function restartCurrent() {
   // Chrome may dispatch the canceled utterance's completion asynchronously.
   // Invalidate it, cancel the old queue, then start the new-rate utterance
   // after the browser has cleared the previous speech task.
+  const resumeAt = currentCharOffset;
   utteranceToken += 1;
   synth.cancel();
   window.setTimeout(() => {
-    if (playing) speakCurrent(false);
+    if (playing) speakCurrent(false, resumeAt);
   }, 180);
 }
 
