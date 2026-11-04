@@ -136,7 +136,7 @@ function collectParagraphs() {
     return;
   }
 
-  paragraphs = [...document.querySelectorAll('#pages .chapter p[data-si]')]
+  paragraphs = [...document.querySelectorAll('#pages [data-si]')]
     .filter(el => el.textContent.trim().length > 0);
 
   chunks = [];
@@ -268,7 +268,11 @@ function speakCurrent(cancelPrevious = true) {
     saveProgress();
     if (chunkIndex < chunks.length) {
       updateProgress();
-      speakCurrent(false);
+      // Chrome can drop immediately chained speech utterances. Yield briefly
+      // before queuing the next segment, while guarding against pause/skip.
+      window.setTimeout(() => {
+        if (playing && token === utteranceToken) speakCurrent(false);
+      }, 80);
     } else {
       playing = false;
       chunkIndex = chunks.length;
@@ -295,7 +299,9 @@ function play() {
     setStatus('This browser does not provide speech synthesis. Try a supported browser or device voice.');
     return;
   }
-  if (!paragraphs.length) collectParagraphs();
+  // Re-read the live reader DOM on every explicit Play. The renderer can
+  // replace chapter nodes after opening or changing the book.
+  collectParagraphs();
   if (!chunks.length) {
     setStatus('No readable text found in this chapter.');
     return;
