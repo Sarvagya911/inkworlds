@@ -3,6 +3,7 @@
 import './styles/index.css';
 import './reader/controls.js';
 import './reader/companion.js';
+import './reader/narration.js';
 
 import { Capacitor } from '@capacitor/core';
 
