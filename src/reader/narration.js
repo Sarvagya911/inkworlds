@@ -415,6 +415,7 @@ function pause() {
   if (isNativeAndroid) TextToSpeech.stop().catch(error => console.warn('[narration] Android TTS stop failed:', error));
   else if (synth) synth.cancel();
   playing = false;
+  clearHighlight();
   saveProgress();
   updateProgress();
   setStatus('Paused');
