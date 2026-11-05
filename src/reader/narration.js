@@ -1,7 +1,10 @@
 import { cur } from './reader.js';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
-const canSpeak = !!(synth && typeof window.SpeechSynthesisUtterance === 'function');
+const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+const canSpeak = isNativeAndroid || !!(synth && typeof window.SpeechSynthesisUtterance === 'function');
 const STORAGE_PREFIX = 'iw:narration:v2:';
 const CHUNK_LIMIT = 900;
 
@@ -13,6 +16,8 @@ let utteranceToken = 0;
 let currentCharOffset = 0;
 let playing = false;
 let voices = [];
+let nativeVoices = [];
+let nativeRangeListener = null;
 let activeBookId = null;
 let observer = null;
 
@@ -177,22 +182,39 @@ function selectedVoice() {
   return voices.find(voice => voice.voiceURI === uri) || null;
 }
 
-function loadVoices() {
-  if (!canSpeak) return;
-  voices = synth.getVoices();
+async function loadVoices() {
   const select = $('narrationVoice');
   if (!select) return;
   const previousValue = select.value;
   select.innerHTML = '<option value="">System default</option>';
+
+  if (isNativeAndroid) {
+    try {
+      const result = await TextToSpeech.getSupportedVoices();
+      nativeVoices = result.voices || [];
+      nativeVoices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = `native:${index}`;
+        option.textContent = `${voice.name} · ${voice.lang}${voice.default ? ' · Default' : ''}${voice.localService ? '' : ' · Network'}`;
+        select.appendChild(option);
+      });
+      if (nativeVoices.some((_, index) => `native:${index}` === previousValue)) select.value = previousValue;
+    } catch (error) {
+      console.warn('[narration] Could not list Android TTS voices:', error);
+      setStatus('Using your Android system voice');
+    }
+    return;
+  }
+
+  if (!synth) return;
+  voices = synth.getVoices();
   voices.forEach(voice => {
     const option = document.createElement('option');
     option.value = voice.voiceURI;
     option.textContent = `${voice.name} · ${voice.lang}${voice.default ? ' · Default' : ''}`;
     select.appendChild(option);
   });
-  if (voices.some(voice => voice.voiceURI === previousValue)) {
-    select.value = previousValue;
-  }
+  if (voices.some(voice => voice.voiceURI === previousValue)) select.value = previousValue;
 }
 
 function setStatus(message) {
@@ -235,7 +257,67 @@ function clearHighlight() {
   paragraphs.forEach(element => element.classList.remove('narration-active'));
 }
 
+async function speakNativeCurrent(startOffset = 0) {
+  if (!chunks.length) {
+    setStatus('No readable text found in this book.');
+    return;
+  }
+  if (chunkIndex >= chunks.length) chunkIndex = 0;
+
+  const token = ++utteranceToken;
+  const item = chunks[chunkIndex];
+  const safeOffset = Math.max(0, Math.min(item.text.length, startOffset));
+  currentCharOffset = safeOffset;
+  highlightParagraph(item.paragraphIndex);
+  const selected = $('narrationVoice')?.value || '';
+  const voiceIndex = selected.startsWith('native:') ? Number(selected.slice(7)) : undefined;
+
+  playing = true;
+  setStatus('Narrating with your Android voice');
+  updateProgress();
+
+  try {
+    await TextToSpeech.speak({
+      text: item.text.slice(safeOffset),
+      lang: nativeVoices[voiceIndex]?.lang || 'en-US',
+      rate: Number($('narrationRate')?.value || 1),
+      pitch: 1,
+      volume: 1,
+      ...(Number.isInteger(voiceIndex) && nativeVoices[voiceIndex] ? { voice: voiceIndex } : {}),
+      queueStrategy: 0
+    });
+
+    if (!playing || token !== utteranceToken) return;
+    chunkIndex += 1;
+    currentCharOffset = 0;
+    saveProgress();
+    if (chunkIndex < chunks.length) {
+      updateProgress();
+      window.setTimeout(() => {
+        if (playing && token === utteranceToken) speakNativeCurrent(0);
+      }, 180);
+    } else {
+      playing = false;
+      chunkIndex = chunks.length;
+      saveProgress();
+      clearHighlight();
+      setStatus('Book text finished');
+      updateProgress();
+    }
+  } catch (error) {
+    if (token !== utteranceToken) return;
+    playing = false;
+    setStatus('Android narration failed. Check that a Text-to-Speech engine is installed.');
+    console.error('[narration] Android TTS error:', error);
+    updateProgress();
+  }
+}
+
 function speakCurrent(cancelPrevious = true, startOffset = 0) {
+  if (isNativeAndroid) {
+    speakNativeCurrent(startOffset);
+    return;
+  }
   if (!canSpeak) {
     setStatus('Speech synthesis is not available in this browser.');
     return;
@@ -315,7 +397,7 @@ function play() {
     setStatus('No readable text found in this chapter.');
     return;
   }
-  if (synth.paused) {
+  if (!isNativeAndroid && synth.paused) {
     synth.resume();
     playing = true;
     setStatus('Resumed');
@@ -328,7 +410,8 @@ function play() {
 
 function pause() {
   utteranceToken += 1;
-  if (synth) synth.cancel();
+  if (isNativeAndroid) TextToSpeech.stop().catch(error => console.warn('[narration] Android TTS stop failed:', error));
+  else if (synth) synth.cancel();
   playing = false;
   saveProgress();
   updateProgress();
@@ -342,7 +425,8 @@ function restartCurrent() {
   // after the browser has cleared the previous speech task.
   const resumeAt = currentCharOffset;
   utteranceToken += 1;
-  synth.cancel();
+  if (isNativeAndroid) TextToSpeech.stop().catch(error => console.warn('[narration] Android TTS stop failed:', error));
+  else synth.cancel();
   window.setTimeout(() => {
     if (playing) speakCurrent(false, resumeAt);
   }, 180);
@@ -405,10 +489,18 @@ function init() {
   makePlayer();
   if (!canSpeak) {
     setStatus('Device narration is unavailable in this browser.');
+  } else if (isNativeAndroid) {
+    loadVoices();
+    TextToSpeech.addListener('onRangeStart', info => {
+      if (!playing || !chunks[chunkIndex]) return;
+      currentCharOffset = Math.max(currentCharOffset, info.end || info.start || 0);
+      updateProgress();
+    }).then(handle => { nativeRangeListener = handle; }).catch(error => {
+      console.warn('[narration] Could not attach Android speech progress listener:', error);
+    });
   } else {
     loadVoices();
     synth.addEventListener?.('voiceschanged', loadVoices);
-    // Some WebViews populate their voice list asynchronously without firing voiceschanged.
     setTimeout(loadVoices, 500);
   }
 
@@ -433,7 +525,7 @@ if (document.readyState === 'loading') {
 
 document.addEventListener('visibilitychange', () => {
   // Do not cancel playback when the app is backgrounded; support varies by browser.
-  if (document.visibilityState === 'visible' && playing && synth?.paused) {
+  if (!isNativeAndroid && document.visibilityState === 'visible' && playing && synth?.paused) {
     synth.resume();
   }
 });
