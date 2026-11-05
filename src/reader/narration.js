@@ -18,6 +18,7 @@ let playing = false;
 let voices = [];
 let nativeVoices = [];
 let nativeRangeListener = null;
+let nativeOffsetBase = 0;
 let activeBookId = null;
 let observer = null;
 
@@ -268,6 +269,7 @@ async function speakNativeCurrent(startOffset = 0) {
   const item = chunks[chunkIndex];
   const safeOffset = Math.max(0, Math.min(item.text.length, startOffset));
   currentCharOffset = safeOffset;
+  nativeOffsetBase = safeOffset;
   highlightParagraph(item.paragraphIndex);
   const selected = $('narrationVoice')?.value || '';
   const voiceIndex = selected.startsWith('native:') ? Number(selected.slice(7)) : undefined;
@@ -493,7 +495,7 @@ function init() {
     loadVoices();
     TextToSpeech.addListener('onRangeStart', info => {
       if (!playing || !chunks[chunkIndex]) return;
-      currentCharOffset = Math.max(currentCharOffset, info.end || info.start || 0);
+      currentCharOffset = nativeOffsetBase + Math.max(0, info.end || info.start || 0);
       updateProgress();
     }).then(handle => { nativeRangeListener = handle; }).catch(error => {
       console.warn('[narration] Could not attach Android speech progress listener:', error);
