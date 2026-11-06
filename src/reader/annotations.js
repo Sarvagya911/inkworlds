@@ -57,10 +57,35 @@ export function checkSelection() {
   const rect = range.getBoundingClientRect(),
     pop = $('selpop');
   pop.hidden = false;
-  const pw = pop.offsetWidth,
-    top = rect.top > 70 ? rect.top - pop.offsetHeight - 8 : rect.bottom + 8;
-  pop.style.top = Math.max(8, top) + 'px';
-  pop.style.left = clamp(rect.left + rect.width / 2 - pw / 2, 8, innerWidth - pw - 8) + 'px';
+
+  const isPhone = window.matchMedia('(max-width: 700px)').matches;
+  const viewportHeight = window.visualViewport?.height || innerHeight;
+  const viewportTop = window.visualViewport?.offsetTop || 0;
+  const popHeight = pop.offsetHeight;
+  const popWidth = pop.offsetWidth;
+
+  // Android's native Copy / Select all toolbar is displayed above selected
+  // text and cannot be layered underneath/overridden by page CSS. On phones,
+  // place Inkworlds' Highlight / Note actions below the selection instead.
+  // If there is not enough room, pin the actions near the bottom of the
+  // visible viewport so they remain reachable and don't fight the native menu.
+  let top;
+  if (isPhone) {
+    const belowSelection = rect.bottom + 12;
+    const visibleBottom = viewportTop + viewportHeight - 12;
+    top = belowSelection + popHeight <= visibleBottom
+      ? belowSelection
+      : visibleBottom - popHeight;
+  } else {
+    top = rect.top > 70 ? rect.top - popHeight - 8 : rect.bottom + 8;
+  }
+
+  pop.style.top = Math.max(viewportTop + 8, top) + 'px';
+  pop.style.left = clamp(
+    rect.left + rect.width / 2 - popWidth / 2,
+    8,
+    innerWidth - popWidth - 8
+  ) + 'px';
 }
 
 export async function saveHighlight(note) {
