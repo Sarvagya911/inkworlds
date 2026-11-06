@@ -496,11 +496,11 @@ addEventListener(
 );
 
 export function updateSoundBtn() {
+  // A deferred autoplay request is not the same as active playback.
+  // Keep the button visually off until the Web Audio engine is running.
   $('soundBtn').setAttribute(
     'aria-pressed',
-    Ambience.playing || pendingSound
-      ? 'true'
-      : 'false'
+    Ambience.playing ? 'true' : 'false'
   );
 }
 
