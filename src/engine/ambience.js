@@ -169,6 +169,23 @@ export const Ambience = {
       this.musicBox();
       L.wind.base = 0.04;
     }
+    if (world === 'ashenRealms') {
+      // Deep volcanic rumble
+      L.hum = this.hum([38, 57, 76]);
+      // Strong hot wind
+      L.wind.base = 0.22;
+
+      // Crackling fire
+      L.fire = this.layer(
+        this.crackle,
+        'highpass',
+        1200,
+        0.7,
+        0.24
+      );
+      // Distant volcanic atmosphere
+      L.rain.base = 0.025;
+    }
     this.L = L;
     this.applyMood(this.mood, true);
   },

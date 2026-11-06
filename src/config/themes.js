@@ -520,6 +520,44 @@ export const THEMES = {
     spine: ['#695247', '#302c28', '#c7a36d'],
     rain: '185,175,150'
   },
+  
+  ashenRealms: {
+    name: 'Ashen Realms',
+    best: 'Dark fantasy, volcanic kingdoms, demons, ancient ruins, dragons and apocalyptic adventures.',
+    title: 'Cinzel Decorative',
+    body: 'Cormorant Garamond',
+    hand: 'Caveat',
+    hs: 1.25,
+
+    panel: 'rgba(17,10,13,.76)',
+    text: '#f5e6d6',
+    accent: '#ff783e',
+
+    bar: 'rgba(13,8,12,.92)',
+    edge: 'rgba(255,120,62,.28)',
+    hl: 'rgba(255,120,62,.32)',
+
+    paper: '#eee0ce',
+    ink: '#281712',
+    rule: 'rgba(120,55,35,.24)',
+
+    orn: '♨',
+
+    spine: [
+      '#71301f',
+      '#1c0d12',
+      '#ff9a52'
+    ],
+
+    rain: '255,105,55',
+
+    base: {
+      storm: 0.02,
+      dark: 0.18,
+      warm: 0.35
+    }
+  },
+
 
   
 };
