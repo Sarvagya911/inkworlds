@@ -50,6 +50,7 @@ export async function viewHome() {
         <div class="actions">
           ${signedIn() ? `<a class="btn" href="#/library">Open your library</a>` : `<a class="btn" href="#/signup">Create a free account</a>`}
           <a class="btn ghost" href="#/read/sample-vellmoor">Read a sample story</a>
+          <a class="btn ghost download-app" href="/downloads/inkworlds.apk" download="inkworlds.apk" aria-label="Download the InkWorlds Android app">Download App</a>
           <a class="btn ghost" href="#/discover">Discover shared books</a>
         </div>
       </div>
