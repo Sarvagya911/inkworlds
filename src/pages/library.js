@@ -1,7 +1,7 @@
 // // Your library shelf.
 // import { sampleMeta, themeOf } from '../app/books.js';
 // import { app, enc, errMsg, signInGate, signedIn } from '../app/helpers.js';
-// import { routeId } from '../app/router.js';
+// import { routeId, subs } from '../app/router.js';
 // import { progOf } from '../app/sync.js';
 // import { rememberDestination } from '../auth/session.js';
 // import { THEMES, fontStack } from '../config/themes.js';
@@ -91,7 +91,7 @@ import {
   signedIn
 } from '../app/helpers.js';
 
-import { routeId } from '../app/router.js';
+import { routeId, subs } from '../app/router.js';
 import { progOf } from '../app/sync.js';
 import { rememberDestination } from '../auth/session.js';
 
@@ -402,10 +402,47 @@ function showUploadTypePicker() {
 
 /* ---------- Shelf rendering ---------- */
 
+const expandedShelves = new Set();
+
+function getSpineWidth(book) {
+  const w = 46 + (book.words || 3000) / 5000;
+  return clamp(w, 48, 84);
+}
+
+function chunkBooksIntoShelves(books, containerWidth) {
+  if (!books.length) return [];
+  const avail = Math.max(320, (containerWidth || 960) - 48);
+  const gap = 6;
+  const shelves = [];
+  let currentShelf = [];
+  let currentWidth = 0;
+
+  for (const book of books) {
+    const spineW = getSpineWidth(book);
+    const needed = currentShelf.length === 0 ? spineW : spineW + gap;
+
+    if (currentShelf.length > 0 && currentWidth + needed > avail) {
+      shelves.push(currentShelf);
+      currentShelf = [book];
+      currentWidth = spineW;
+    } else {
+      currentShelf.push(book);
+      currentWidth += needed;
+    }
+  }
+
+  if (currentShelf.length > 0) {
+    shelves.push(currentShelf);
+  }
+
+  return shelves;
+}
+
 function renderShelf(
   title,
   books,
-  emptyMessage = ''
+  emptyMessage = '',
+  categoryId = ''
 ) {
   if (!books.length) {
     if (!emptyMessage) {
@@ -427,14 +464,89 @@ function renderShelf(
     `;
   }
 
-  return `
-    <div class="shelf-block">
-      <h2 class="section-title">
-        ${esc(title)}
-      </h2>
+  // Mobile: Keep untouched single horizontal-scrolling shelf!
+  const isMobile =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(max-width: 600px)').matches;
 
-      <div class="shelf">
-        ${books.map(spineHTML).join('')}
+  if (isMobile) {
+    return `
+      <div class="shelf-block">
+        <h2 class="section-title">
+          ${esc(title)}
+        </h2>
+
+        <div class="shelf">
+          ${books.map(spineHTML).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Desktop / Tablet: multi-row physical bookcase tiers
+  const libraryShelvesEl = $('libraryShelves');
+  const containerWidth =
+    (libraryShelvesEl && libraryShelvesEl.clientWidth) ||
+    Math.min(window.innerWidth - 64, 1152) ||
+    960;
+  const tiers = chunkBooksIntoShelves(books, containerWidth);
+
+  const hasExtra = tiers.length > 1;
+  const isExpanded = expandedShelves.has(categoryId);
+
+  const firstTier = tiers[0] || [];
+  const extraTiers = tiers.slice(1);
+
+  return `
+    <div class="shelf-block" data-category="${esc(categoryId)}">
+      <div class="shelf-header">
+        <div class="shelf-title-wrap">
+          <h2 class="section-title">
+            ${esc(title)}
+          </h2>
+          <span class="shelf-count-badge">
+            ${books.length}
+          </span>
+        </div>
+
+        ${
+          hasExtra
+            ? `
+          <button
+            type="button"
+            class="shelf-expand-btn"
+            data-shelf-toggle="${esc(categoryId)}"
+            aria-expanded="${isExpanded ? 'true' : 'false'}"
+          >
+            <span>${isExpanded ? 'Collapse shelf ▴' : `Show all ${books.length} books ▾`}</span>
+          </button>
+        `
+            : ''
+        }
+      </div>
+
+      <div class="shelf-tiers">
+        <div class="shelf shelf-tier">
+          ${firstTier.map(spineHTML).join('')}
+        </div>
+
+        ${
+          hasExtra
+            ? `
+          <div class="shelf-extra-tiers ${isExpanded ? 'expanded' : 'collapsed'}" id="shelf-extra-${esc(categoryId)}">
+            ${extraTiers
+              .map(
+                tier => `
+              <div class="shelf shelf-tier">
+                ${tier.map(spineHTML).join('')}
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+        `
+            : ''
+        }
       </div>
     </div>
   `;
@@ -706,23 +818,44 @@ export async function viewLibrary() {
         return;
       }
 
+      const attachToggleListeners = () => {
+        shelves.querySelectorAll('[data-shelf-toggle]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const cat = btn.dataset.shelfToggle;
+            if (expandedShelves.has(cat)) {
+              expandedShelves.delete(cat);
+            } else {
+              expandedShelves.add(cat);
+            }
+            draw();
+          });
+        });
+      };
+
       shelves.innerHTML = [
         renderShelf(
           'Novels',
-          novels
+          novels,
+          '',
+          'novels'
         ),
         renderShelf(
           'Light Novels',
-          lightNovels
+          lightNovels,
+          '',
+          'light-novels'
         ),
         renderShelf(
           'Manga',
-          manga
+          manga,
+          '',
+          'manga'
         )
       ]
         .filter(Boolean)
         .join('');
 
+      attachToggleListeners();
       return;
     }
 
@@ -758,8 +891,21 @@ export async function viewLibrary() {
     shelves.innerHTML = renderShelf(
       selectedTitle,
       selected,
-      `You don't have any ${selectedTitle.toLowerCase()} yet.`
+      `You don't have any ${selectedTitle.toLowerCase()} yet.`,
+      contentType || 'selected'
     );
+
+    shelves.querySelectorAll('[data-shelf-toggle]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = btn.dataset.shelfToggle;
+        if (expandedShelves.has(cat)) {
+          expandedShelves.delete(cat);
+        } else {
+          expandedShelves.add(cat);
+        }
+        draw();
+      });
+    });
   };
 
   document
@@ -800,4 +946,19 @@ export async function viewLibrary() {
   );
 
   draw();
+
+  let resizeTimer = null;
+  const onResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (rid === routeId && $('libraryShelves')) {
+        draw();
+      }
+    }, 150);
+  };
+  window.addEventListener('resize', onResize);
+  subs.push(() => {
+    clearTimeout(resizeTimer);
+    window.removeEventListener('resize', onResize);
+  });
 }
