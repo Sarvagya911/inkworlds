@@ -12,6 +12,12 @@
 // Everything heavy (sky, garden, marble floor, iron ribs, vines, vignette) is
 // pre-rendered once into state.canvases and only rebuilt when w/h/DPR change.
 // All glows, petals and fireflies are blitted from pre-rendered sprites.
+//
+// PHONE / PORTRAIT: when the viewport is clearly taller than wide, makeLayout()
+// switches to a portrait composition (shallower perspective so the garden + manor
+// stay visible, vines hugging the screen edges with fewer, larger roses, bigger
+// lanterns/moon/manor, smaller petals, a stronger reading veil). Landscape output
+// is identical to the original desktop design. All phone tuning lives in makeLayout().
 
 const TAU = Math.PI * 2;
 const PI = Math.PI;
@@ -40,6 +46,58 @@ function makeCanvas(w, h, scale) {
 }
 
 const getDpr = () => (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+
+/* ════════════════════════════════════════════════════════════════════════
+   LAYOUT — one place for every landscape-vs-portrait decision
+   ════════════════════════════════════════════════════════════════════════ */
+
+function makeLayout(w, h) {
+  const portrait = h > w * 1.1;
+  const u = Math.min(w, h);
+  return {
+    portrait,
+    // nave perspective: smaller decay = shallower corridor = wider far opening
+    decay: portrait ? 0.3 : 0.52,
+    vy: portrait ? 0.56 : 0.6,
+    // moon
+    moonX: portrait ? 0.7 : 0.66,
+    moonY: portrait ? 0.15 : 0.19,
+    moonR: portrait ? clamp(w * 0.085, 20, 44) : clamp(u * 0.045, 16, 56),
+    // garden
+    manorS: portrait ? clamp(w * 0.03, 7, 14) : clamp(w * 0.017, 5, 26),
+    trees: portrait ? 28 : 44,
+    lights: portrait ? 12 : 18,
+    ridgeK: portrait ? 2.4 : 1,
+    // floor petals
+    floorPetals: portrait ? 170 : 280,
+    aislePetals: portrait ? 95 : 150,
+    petalU: portrait ? clamp(u / 420, 0.8, 1.2) : clamp(u / 900, 0.5, 1.4),
+    // ironwork + couple
+    ironK: portrait ? 1.5 : 1,
+    coupleK: portrait ? 1.15 : 1,
+    // lanterns
+    lanternS: portrait ? clamp(u * 0.07, 22, 40) : clamp(u * 0.044, 20, 44),
+    glow: portrait ? clamp(u * 0.24, 80, 120) : clamp(u * 0.19, 90, 220),
+    lenK: portrait ? 0.75 : 1,
+    // atmosphere
+    beamK: portrait ? 0.75 : 1,
+    petalK: portrait ? clamp(w / 520, 0.55, 0.85) : 1,
+    petalA: portrait ? 0.85 : 1,
+    // vines
+    vineStep: portrait ? Math.max(9, u * 0.032) : Math.max(7, u * 0.026),
+    maxIn: w * (portrait ? 0.2 : (w > h ? 0.17 : 0.3)),
+    bp0: portrait ? 0.09 : 0.15,
+    bp1: portrait ? 0.06 : 0.1,
+    rp: portrait ? 0.03 : 0.045,
+    re: portrait ? 0.6 : 0.72,
+    leafK: portrait ? 1.3 : 1,
+    budK: portrait ? 0.03 : 0.022,
+    roseA: portrait ? 0.04 : 0.024,
+    roseB: portrait ? 0.035 : 0.024,
+    roseMin: portrait ? 15 : 12,
+    roseMax: portrait ? 32 : 44,
+  };
+}
 
 /* ════════════════════════════════════════════════════════════════════════
    SPRITES (built once in init)
@@ -167,16 +225,17 @@ function createSprites(sp) {
 const NAVE_N = 6;
 const RIB_T = [0, 0.16, 0.34, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 
-function buildNave(w, h) {
+function buildNave(w, h, lay) {
   const N = NAVE_N;
   const n = {
-    N, cx: w * 0.5, vy: h * 0.6,
+    N, cx: w * 0.5, vy: h * lay.vy, decay: lay.decay, lay,
+    mx: w * lay.moonX, my: h * lay.moonY,
     hw: new Float32Array(N), base: new Float32Array(N), spring: new Float32Array(N),
     apex: new Float32Array(N), ctrl: new Float32Array(N), f: new Float32Array(N),
   };
   const floorY = h * 0.92;
   for (let k = 0; k < N; k++) {
-    const f = 1 / (1 + 0.52 * k);
+    const f = 1 / (1 + n.decay * k);
     n.f[k] = f;
     n.hw[k] = w * 0.64 * f;
     n.base[k] = n.vy + (floorY - n.vy) * f;
@@ -256,6 +315,7 @@ function drawManor(g, x, y, s) {
 }
 
 function paintBack(g, w, h, n, candles) {
+  const L = n.lay;
   const cx = n.cx, vy = n.vy, N = n.N, u = Math.min(w, h);
   const P = { x: 0, y: 0 }, Q = { x: 0, y: 0 };
   let gr;
@@ -272,7 +332,7 @@ function paintBack(g, w, h, n, candles) {
   g.fillRect(0, 0, w, h);
 
   // ── moon ──
-  const mx = w * 0.66, my = h * 0.19, mr = clamp(u * 0.045, 16, 56);
+  const mx = n.mx, my = n.my, mr = L.moonR;
   gr = g.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 10);
   gr.addColorStop(0, 'rgba(255,226,238,0.36)');
   gr.addColorStop(0.25, 'rgba(228,168,212,0.15)');
@@ -318,12 +378,12 @@ function paintBack(g, w, h, n, candles) {
   g.restore();
 
   // ── distant garden & manor ──
-  ridge(g, w, vy + h * 0.004, h * 0.045, 'rgba(60,25,50,1)', 1.7, 0.0052);
-  drawManor(g, cx - w * 0.02, vy + h * 0.008, clamp(w * 0.017, 5, 26));
-  ridge(g, w, vy + h * 0.01, h * 0.034, 'rgba(42,18,38,1)', 4.1, 0.0087);
+  ridge(g, w, vy + h * 0.004, h * 0.045, 'rgba(60,25,50,1)', 1.7, 0.0052 * L.ridgeK);
+  drawManor(g, cx - w * 0.02, vy + h * 0.008, L.manorS);
+  ridge(g, w, vy + h * 0.01, h * 0.034, 'rgba(42,18,38,1)', 4.1, 0.0087 * L.ridgeK);
 
   const trng = mulberry32(515);
-  for (let i = 0; i < 44; i++) {
+  for (let i = 0; i < L.trees; i++) {
     const x = trng() * w, y0 = vy + h * 0.014, ht = h * (0.03 + trng() * 0.05), tw = ht * (0.15 + trng() * 0.1);
     g.fillStyle = trng() < 0.5 ? 'rgba(28,13,27,1)' : 'rgba(34,15,31,1)';
     if (trng() < 0.62) {
@@ -338,7 +398,7 @@ function paintBack(g, w, h, n, candles) {
     }
   }
   // fairy lights strung through the garden
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < L.lights; i++) {
     const x = w * (0.04 + 0.92 * trng()), y = vy + h * (0.004 + trng() * 0.016);
     g.fillStyle = 'rgba(255,190,140,0.12)';
     g.beginPath(); g.arc(x, y, 6, 0, TAU); g.fill();
@@ -376,7 +436,7 @@ function paintBack(g, w, h, n, candles) {
   g.clip();
 
   const yOf = (f) => vy + (h * 0.92 - vy) * f;
-  const fOf = (k) => 1 / (1 + 0.52 * k);
+  const fOf = (k) => 1 / (1 + n.decay * k);
   const tileW = w * 0.15;
   const fEnd = n.f[N - 1];
   g.fillStyle = 'rgba(255,205,225,0.032)';
@@ -410,9 +470,9 @@ function paintBack(g, w, h, n, candles) {
 
   // ── rose petals scattered down the aisle ──
   const prng = mulberry32(77);
-  const petalU = clamp(u / 900, 0.5, 1.4);
-  for (let i = 0; i < 280; i++) {
-    const aisle = i < 150;
+  const petalU = L.petalU;
+  for (let i = 0; i < L.floorPetals; i++) {
+    const aisle = i < L.aislePetals;
     const f = fEnd * 1.05 + Math.pow(prng(), 1.6) * (1.4 - fEnd);
     const y = yOf(f);
     const x = cx + (prng() - 0.5) * (aisle ? w * 0.17 : w * 0.9) * f;
@@ -599,25 +659,27 @@ function growVine(o, x, y, a0, steps, wid, depth) {
     if (da > PI) da -= TAU; else if (da < -PI) da += TAU;
     a += da * 0.07 + (rng() - 0.5) * 0.6;
     const dIn = (px - o.edgeX) * o.inward;
-    if (dIn > o.maxIn) a -= o.inward * 0.2;
-    else if (dIn < -o.w * 0.015) a += o.inward * 0.2;
+    if (dIn > o.maxIn) {
+      // portrait: steer back harder the further a branch strays, so the centre column stays clear
+      a -= o.inward * (o.portrait ? 0.2 + 0.5 * clamp((dIn - o.maxIn) / (o.maxIn * 0.6)) : 0.2);
+    } else if (dIn < -o.w * 0.015) a += o.inward * 0.2;
     const nx = px + Math.cos(a) * o.step, ny = py + Math.sin(a) * o.step;
     const lw = Math.max(0.9, wid * (1 - prog * 0.5));
     g.strokeStyle = depth < 2 ? 'rgba(19,10,16,0.98)' : 'rgba(25,12,20,0.97)';
     g.lineWidth = lw;
     g.beginPath(); g.moveTo(px, py); g.lineTo(nx, ny); g.stroke();
     if (rng() < 0.45) thorn(g, nx, ny, a + (rng() < 0.5 ? 1 : -1) * (1.0 + rng() * 0.5), lw * 1.4 + o.u * 0.007);
-    if (rng() < 0.6) drawLeaf(g, nx, ny, a + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.7), o.u * (0.028 + rng() * 0.032) * (1 - depth * 0.12), (rng() * 4) | 0);
-    if (rng() < 0.3) drawLeaf(g, nx, ny, a + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.7), o.u * (0.024 + rng() * 0.028) * (1 - depth * 0.12), (rng() * 4) | 0);
-    if (depth < 3 && i > 2 && i < steps - 3 && rng() < (depth === 0 ? 0.15 : 0.1)) {
+    if (rng() < 0.6) drawLeaf(g, nx, ny, a + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.7), o.lu * (0.028 + rng() * 0.032) * (1 - depth * 0.12), (rng() * 4) | 0);
+    if (rng() < 0.3) drawLeaf(g, nx, ny, a + (rng() < 0.5 ? 1 : -1) * (0.6 + rng() * 0.7), o.lu * (0.024 + rng() * 0.028) * (1 - depth * 0.12), (rng() * 4) | 0);
+    if (depth < 3 && i > 2 && i < steps - 3 && rng() < (depth === 0 ? o.bp0 : o.bp1)) {
       growVine(o, nx, ny, a + (rng() < 0.5 ? -1 : 1) * (0.55 + rng() * 0.65), Math.round(steps * (0.3 + rng() * 0.25)), wid * 0.62, depth + 1);
     }
-    if (depth <= 1 && i > 4 && rng() < 0.045) o.addRose(nx, ny);
+    if (depth <= 1 && i > 4 && rng() < o.rp) o.addRose(nx, ny);
     px = nx; py = ny;
   }
   if (depth >= 1) {
-    if (rng() < 0.72) o.addRose(px, py);
-    else o.buds.push({ x: px, y: py, a, r: o.u * 0.022 });
+    if (rng() < o.re) o.addRose(px, py);
+    else o.buds.push({ x: px, y: py, a, r: o.u * o.budK });
   }
 }
 
@@ -632,7 +694,7 @@ function garland(o, n, k, side, t0, t1, wid) {
     g.strokeStyle = 'rgba(19,10,16,0.98)';
     g.lineWidth = wid * (0.7 + rng() * 0.5);
     g.beginPath(); g.moveTo(P.x, P.y); g.lineTo(Q.x, Q.y); g.stroke();
-    if (rng() < 0.55) drawLeaf(g, Q.x, Q.y, a + (rng() < 0.5 ? 1 : -1) * (0.7 + rng() * 0.6), o.u * (0.024 + rng() * 0.026), (rng() * 4) | 0);
+    if (rng() < 0.55) drawLeaf(g, Q.x, Q.y, a + (rng() < 0.5 ? 1 : -1) * (0.7 + rng() * 0.6), o.lu * (0.024 + rng() * 0.026), (rng() * 4) | 0);
     if (rng() < 0.4) thorn(g, Q.x, Q.y, a + (rng() < 0.5 ? 1 : -1) * 1.2, wid * 1.5 + o.u * 0.006);
     if (rng() < 0.1) o.addRose(Q.x, Q.y);
     if (rng() < 0.13) {
@@ -643,13 +705,14 @@ function garland(o, n, k, side, t0, t1, wid) {
       g.beginPath(); g.moveTo(Q.x, Q.y);
       g.quadraticCurveTo(Q.x + (rng() - 0.5) * dl, Q.y + dl * 0.5, Q.x + (rng() - 0.5) * dl * 0.6, Q.y + dl);
       g.stroke();
-      drawLeaf(g, Q.x, Q.y + dl, PI * 0.5 + (rng() - 0.5), o.u * 0.022, (rng() * 4) | 0);
+      drawLeaf(g, Q.x, Q.y + dl, PI * 0.5 + (rng() - 0.5), o.lu * 0.022, (rng() * 4) | 0);
     }
     P.x = Q.x; P.y = Q.y;
   }
 }
 
 function paintVines(g, w, h, n) {
+  const L = n.lay;
   const u = Math.min(w, h);
   const roses = [];
   const buds = [];
@@ -659,12 +722,22 @@ function paintVines(g, w, h, n) {
     const o = {
       g, rng: mulberry32(side < 0 ? 7741 : 9103), w, h, u, side,
       inward: -side, edgeX: side < 0 ? 0 : w,
-      maxIn: w * (w > h ? 0.17 : 0.3), step: Math.max(7, u * 0.026),
+      maxIn: L.maxIn, step: L.vineStep,
+      portrait: L.portrait, lu: u * L.leafK, budK: L.budK,
+      bp0: L.bp0, bp1: L.bp1, rp: L.rp, re: L.re,
       buds,
     };
     o.addRose = function (x, y) {
-      const r = clamp(u * (0.024 + rngRose() * 0.024), 12, 44);
-      roses.push({ x, y, r, rot: rngRose() * TAU, tone: (rngRose() * 3) | 0, la: Math.atan2(h * 0.35 - y, n.cx - x) });
+      const r = clamp(u * (L.roseA + rngRose() * L.roseB), L.roseMin, L.roseMax);
+      const rose = { x, y, r, rot: rngRose() * TAU, tone: (rngRose() * 3) | 0, la: Math.atan2(h * 0.35 - y, n.cx - x) };
+      if (L.portrait) {
+        // keep phone roses evenly spread instead of piling into clumps
+        for (let i = 0; i < roses.length; i++) {
+          const q = roses[i], dx = q.x - x, dy = q.y - y, md = (q.r + r) * 0.78;
+          if (dx * dx + dy * dy < md * md) return;
+        }
+      }
+      roses.push(rose);
     };
     const steps = Math.round((h * 0.98) / (o.step * 0.8));
     growVine(o, o.edgeX + o.inward * w * 0.012, h * 1.03, -PI / 2 + o.inward * 0.18, steps, u * 0.014 + 3, 0);
@@ -693,7 +766,7 @@ function ironStroke(g, lw, draw) {
 }
 
 function paintFront(g, w, h, n) {
-  const u = Math.min(w, h), cx = n.cx, N = n.N;
+  const u = Math.min(w, h), cx = n.cx, N = n.N, ik = n.lay.ironK;
   const P = { x: 0, y: 0 }, Q = { x: 0, y: 0 };
   g.lineCap = 'round';
   g.lineJoin = 'round';
@@ -714,7 +787,7 @@ function paintFront(g, w, h, n) {
 
   // longitudinal ribs between arches
   for (let k = 0; k < N - 1; k++) {
-    const lw = Math.max(0.9, u * 0.0068 * n.f[k]);
+    const lw = Math.max(0.9, u * 0.0068 * n.f[k] * ik);
     ironStroke(g, lw, () => {
       for (let ti = 1; ti < RIB_T.length; ti++) {
         for (let s = -1; s <= 1; s += 2) {
@@ -729,12 +802,12 @@ function paintFront(g, w, h, n) {
 
   // arches
   for (let k = 0; k < N; k++) {
-    ironStroke(g, Math.max(1.4, u * 0.0125 * n.f[k]), () => archPath(g, n, k));
+    ironStroke(g, Math.max(1.4, u * 0.0125 * n.f[k] * ik), () => archPath(g, n, k));
   }
 
   // rivets & bosses
   for (let k = 1; k < N; k++) {
-    const rr = Math.max(1.3, u * 0.006 * n.f[k] * 1.6);
+    const rr = Math.max(1.3, u * 0.006 * n.f[k] * 1.6 * ik);
     for (let ti = 1; ti < RIB_T.length; ti++) {
       for (let s = -1; s <= 1; s += 2) {
         if (RIB_T[ti] === 1 && s === 1) continue;
@@ -763,7 +836,7 @@ function paintFront(g, w, h, n) {
   paintVines(g, w, h, n);
 }
 
-function paintOverlay(g, w, h) {
+function paintOverlay(g, w, h, portrait) {
   const R = Math.hypot(w, h) * 0.5;
   let gr = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.38, w / 2, h / 2, R * 1.02);
   gr.addColorStop(0, 'rgba(24,6,18,0)');
@@ -771,14 +844,22 @@ function paintOverlay(g, w, h) {
   gr.addColorStop(1, 'rgba(14,3,12,0.74)');
   g.fillStyle = gr;
   g.fillRect(0, 0, w, h);
-  // reading veil — keeps the centre column calm and high-contrast
+  // reading veil — keeps the text column calm and high-contrast
   gr = g.createLinearGradient(0, 0, w, 0);
-  gr.addColorStop(0, 'rgba(10,3,10,0)');
-  gr.addColorStop(0.26, 'rgba(10,3,10,0)');
-  gr.addColorStop(0.38, 'rgba(14,4,12,0.2)');
-  gr.addColorStop(0.62, 'rgba(14,4,12,0.2)');
-  gr.addColorStop(0.74, 'rgba(10,3,10,0)');
-  gr.addColorStop(1, 'rgba(10,3,10,0)');
+  if (portrait) {
+    // on a phone the text spans nearly the full width, so the veil does too
+    gr.addColorStop(0, 'rgba(10,3,10,0.08)');
+    gr.addColorStop(0.18, 'rgba(14,4,12,0.24)');
+    gr.addColorStop(0.82, 'rgba(14,4,12,0.24)');
+    gr.addColorStop(1, 'rgba(10,3,10,0.08)');
+  } else {
+    gr.addColorStop(0, 'rgba(10,3,10,0)');
+    gr.addColorStop(0.26, 'rgba(10,3,10,0)');
+    gr.addColorStop(0.38, 'rgba(14,4,12,0.2)');
+    gr.addColorStop(0.62, 'rgba(14,4,12,0.2)');
+    gr.addColorStop(0.74, 'rgba(10,3,10,0)');
+    gr.addColorStop(1, 'rgba(10,3,10,0)');
+  }
   g.fillStyle = gr;
   g.fillRect(0, 0, w, h);
   gr = g.createLinearGradient(0, 0, 0, h);
@@ -865,10 +946,6 @@ function makeLanternSprites(s, sp) {
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   CACHE MANAGEMENT
-   ════════════════════════════════════════════════════════════════════════ */
-
-/* ════════════════════════════════════════════════════════════════════════
    ROMANCE LAYER — candlelit aisle, fairy-light swags, moonbeams,
    a waltzing couple, hearts on tap
    ════════════════════════════════════════════════════════════════════════ */
@@ -878,13 +955,14 @@ const CANDLE_K = [0.5, 1.1, 1.8, 2.5, 3.3, 4.2];
 function buildCandles(n, w, h) {
   const out = new Float32Array(CANDLE_K.length * 2 * 4);
   const rng = mulberry32(61);
+  const chBase = Math.min(h * 0.06, w * 0.1);
   let o = 0;
   for (let i = 0; i < CANDLE_K.length; i++) {
-    const f = 1 / (1 + 0.52 * CANDLE_K[i]);
+    const f = 1 / (1 + n.decay * CANDLE_K[i]);
     for (let s = -1; s <= 1; s += 2) {
       out[o++] = n.cx + s * w * 0.27 * f;
       out[o++] = n.vy + (h * 0.92 - n.vy) * f;
-      out[o++] = h * 0.06 * f;
+      out[o++] = chBase * f;
       out[o++] = rng() * TAU;
     }
   }
@@ -927,11 +1005,11 @@ const BEAM_W = [0.12, 0.07, 0.15, 0.09, 0.12];
 
 function drawBeams(c, st, ts, w, h, m) {
   const S = st.sprites, u = Math.min(w, h);
-  const mx = w * 0.66, my = h * 0.19;
+  const mx = st.nave.mx, my = st.nave.my, bk = st.lay.beamK;
   c.globalCompositeOperation = 'lighter';
   for (let i = 0; i < BEAM_ANG.length; i++) {
     const a = BEAM_ANG[i] + Math.sin(ts * 0.07 + i) * 0.03;
-    const al = (0.045 + 0.03 * Math.sin(ts * 0.3 + i * 1.9)) * (1 - 0.6 * m.storm) * (1 - 0.4 * m.dark);
+    const al = (0.045 + 0.03 * Math.sin(ts * 0.3 + i * 1.9)) * (1 - 0.6 * m.storm) * (1 - 0.4 * m.dark) * bk;
     const bw = u * BEAM_W[i];
     c.globalAlpha = Math.max(0, al);
     c.save();
@@ -994,7 +1072,7 @@ function drawBulbs(c, st, ts, m) {
 
 // a tiny couple waltzing at the far end of the nave
 function drawCouple(c, S, n, ts, w, h, m) {
-  const q = h * 0.0088;
+  const q = h * 0.0088 * n.lay.coupleK;
   const x = n.cx + Math.sin(ts * 0.32) * w * 0.03;
   const y = n.base[n.N - 1] + h * 0.032;
   const turn = ts * 1.05, cs = Math.cos(turn);
@@ -1085,13 +1163,25 @@ function drawHearts(c, st, d) {
   c.globalAlpha = 1;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   CACHE MANAGEMENT
+   ════════════════════════════════════════════════════════════════════════ */
+
 function ensureCaches(st, w, h) {
   const dpr = getDpr();
   const cacheScale = Math.min(1.5, Math.max(1, dpr));
   const cs = st.canvases;
-  if (cs && cs.w === w && cs.h === h && cs.scale === cacheScale) return;
+  if (cs && cs.scale === cacheScale && cs.w === w) {
+    if (cs.h === h) return;
+    // Phones resize the viewport a little whenever the URL bar shows/hides. If the
+    // viewport only got slightly shorter, keep the existing (taller) cache instead
+    // of rebuilding the whole scene mid-scroll; draw() renders in cache space.
+    if (cs.lay.portrait && h < cs.h && h >= cs.h * 0.85) return;
+  }
 
-  const nave = buildNave(w, h);
+  const lay = makeLayout(w, h);
+  st.lay = lay;
+  const nave = buildNave(w, h, lay);
   st.nave = nave;
   const back = makeCanvas(w, h, cacheScale);
   st.candles = buildCandles(nave, w, h);
@@ -1100,14 +1190,13 @@ function ensureCaches(st, w, h) {
   const front = makeCanvas(w, h, cacheScale);
   paintFront(front.g, w, h, nave);
   const overlay = makeCanvas(w, h, 0.5);
-  paintOverlay(overlay.g, w, h);
-  st.canvases = { w, h, scale: cacheScale, back: back.cv, front: front.cv, overlay: overlay.cv };
+  paintOverlay(overlay.g, w, h, lay.portrait);
+  st.canvases = { w, h, scale: cacheScale, lay, back: back.cv, front: front.cv, overlay: overlay.cv };
 
-  const u = Math.min(w, h);
   const sp = Math.min(2, Math.max(1, dpr));
   for (let i = 0; i < st.lanterns.length; i++) {
     const l = st.lanterns[i];
-    l.s = clamp(u * 0.044, 20, 44) * l.sizeK;
+    l.s = lay.lanternS * l.sizeK;
     l.spr = makeLanternSprites(l.s, sp);
   }
 }
@@ -1117,14 +1206,14 @@ function ensureCaches(st, w, h) {
    ════════════════════════════════════════════════════════════════════════ */
 
 function updateLanterns(st, d, ts, w, h, m) {
-  const L = st.lanterns;
+  const L = st.lanterns, lay = st.lay;
   const steps = Math.max(1, Math.ceil(d / 0.01));
   const hd = d / steps;
   const damping = Math.exp(-0.34 * hd);
   const stormK = 1 + m.storm * 3.5;
   for (let i = 0; i < L.length; i++) {
     const l = L[i];
-    l.len = h * l.lenK;
+    l.len = h * l.lenK * lay.lenK;
     const gl = 1000 / l.len; // g / length
     const wind = (Math.sin(ts * 0.55 + l.phase) * 0.2 + Math.sin(ts * 0.21 + l.phase * 1.7) * 0.14) * stormK + m.storm * 0.55;
     for (let s = 0; s < steps; s++) {
@@ -1135,7 +1224,7 @@ function updateLanterns(st, d, ts, w, h, m) {
     if (l.angle > 0.9) { l.angle = 0.9; l.vAngle *= -0.3; }
     else if (l.angle < -0.9) { l.angle = -0.9; l.vAngle *= -0.3; }
     const sn = Math.sin(l.angle), cn = Math.cos(l.angle);
-    l.ax = l.rx * w;
+    l.ax = (lay.portrait ? l.rxP : l.rx) * w;
     l.ay = -4;
     l.ringX = l.ax + sn * l.len;
     l.ringY = l.ay + cn * l.len;
@@ -1171,7 +1260,7 @@ function drawFlame(c, s, fl, ts, ph) {
 }
 
 function drawLanterns(c, st, ts, w, h, m) {
-  const L = st.lanterns, S = st.sprites, u = Math.min(w, h);
+  const L = st.lanterns, S = st.sprites, glBase = st.lay.glow;
 
   // chains (dashed round caps read as links)
   c.lineCap = 'round';
@@ -1196,7 +1285,7 @@ function drawLanterns(c, st, ts, w, h, m) {
   for (let i = 0; i < L.length; i++) {
     const l = L[i];
     const I = l.I * (1 - 0.35 * m.dark * 0) * l.gain;
-    const gl = clamp(u * 0.19, 90, 220) * l.sizeK;
+    const gl = glBase * l.sizeK;
     let R = gl * 3.4;
     c.globalAlpha = clamp(0.2 * I);
     c.drawImage(S.rose, l.x - R, l.y - R, R * 2, R * 2);
@@ -1238,6 +1327,7 @@ function drawLanterns(c, st, ts, w, h, m) {
 
 function stepAndDrawPetals(c, st, from, to, d, ts, w, h, windX) {
   const spr = st.sprites.petals, ptr = st.ptr, ps = ptr.speed, P = st.petals;
+  const pk = st.lay.petalK, pa = st.lay.petalA;
   const cx = w * 0.5, colW = w * 0.2;
   const decay = Math.exp(-1.7 * d);
   const relax = Math.min(1, d * 1.4);
@@ -1282,9 +1372,9 @@ function stepAndDrawPetals(c, st, from, to, d, ts, w, h, windX) {
     const af = Math.abs(fs);
     const sx = af < 0.07 ? 0.07 : af;
     const sy = 0.84 + 0.16 * Math.abs(Math.cos(p.tilt));
-    const H = p.size * p.z, W = H * (PW / PH);
+    const H = p.size * p.z * pk, W = H * (PW / PH);
     const cf = 0.5 + 0.5 * clamp((Math.abs(p.x - cx) - w * 0.1) / colW);
-    c.globalAlpha = p.alpha * cf;
+    c.globalAlpha = p.alpha * cf * pa;
     c.save();
     c.translate(p.x, p.y);
     c.rotate(p.angle);
@@ -1431,16 +1521,17 @@ export default {
       stars[i * 5 + 4] = Math.random() < 0.15 ? 2 : 1;
     }
 
-    const mkLantern = (rx, lenK, sizeK, phase, gain) => ({
-      rx, lenK, sizeK, phase, gain,
+    // rx = horizontal anchor (landscape), rxP = horizontal anchor (portrait)
+    const mkLantern = (rx, lenK, sizeK, phase, gain, rxP) => ({
+      rx, rxP, lenK, sizeK, phase, gain,
       angle: (Math.random() - 0.5) * 0.1, vAngle: 0,
       s: 28, len: 0, ax: 0, ay: -4, ringX: 0, ringY: 0, x: -9999, y: -9999,
       flick: 0, I: 1, spr: null,
     });
     const lanterns = [
-      mkLantern(0.22, 0.25, 1.0, 0.3, 1.0),
-      mkLantern(0.5, 0.2, 1.2, 2.1, 0.78),
-      mkLantern(0.78, 0.27, 0.95, 4.0, 1.0),
+      mkLantern(0.22, 0.25, 1.0, 0.3, 1.0, 0.17),
+      mkLantern(0.5, 0.2, 1.2, 2.1, 0.78, 0.5),
+      mkLantern(0.78, 0.27, 0.95, 4.0, 1.0, 0.83),
     ];
 
     const hearts = [];
@@ -1456,7 +1547,7 @@ export default {
       dash: [3.5, 3.2], noDash: [],
       ripIdx: 0, time: 0,
       sprites: createSprites(sp),
-      canvases: null, nave: null,
+      canvases: null, nave: null, lay: null,
     };
   },
 
@@ -1465,9 +1556,13 @@ export default {
     const d = Math.max(0, Math.min(0.1, dt > 1 ? dt / 1000 : dt || 0.016));
     const ts = t * 0.001;
     st.time += d;
-    st.w = w; st.h = h;
     ensureCaches(st, w, h);
     const cs = st.canvases, S = st.sprites, m = st.m, ptr = st.ptr;
+
+    // Render in cache space. Normally identical to the viewport; on phones it can be
+    // a touch taller than the viewport while the URL bar is showing (extra is clipped).
+    w = cs.w; h = cs.h;
+    st.w = w; st.h = h;
 
     // ease mood so analyzer jumps never pop
     const k = Math.min(1, d * 1.6);
