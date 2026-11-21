@@ -124,21 +124,8 @@
   gap: 1rem;
 }
 
-.shelf-title-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-}
-
-.shelf-title-wrap .section-title {
+.shelf-header .section-title {
   margin: 0;
-}
-
-.shelf-count-badge {
-  font-family: var(--ui);
-  font-size: 0.8rem;
-  color: var(--muted);
-  opacity: 0.75;
 }
 
 .shelf-expand-btn {

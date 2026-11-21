@@ -491,8 +491,14 @@ function renderShelf(
     960;
   const tiers = chunkBooksIntoShelves(books, containerWidth);
 
-  const hasExtra = tiers.length > 1;
-  const isExpanded = expandedShelves.has(categoryId);
+  // Smart threshold:
+  // If there's only 1 shelf, or only 2 shelves with a small overflow (<= 4 books),
+  // show ALL shelves automatically with NO collapse button.
+  // Only offer collapse when there are 3+ shelves or a large overflow (> 4 books).
+  const extraBooksCount = tiers.slice(1).reduce((sum, t) => sum + t.length, 0);
+  const canCollapse = tiers.length > 2 || (tiers.length === 2 && extraBooksCount > 4);
+
+  const isExpanded = !canCollapse || expandedShelves.has(categoryId);
 
   const firstTier = tiers[0] || [];
   const extraTiers = tiers.slice(1);
@@ -500,17 +506,12 @@ function renderShelf(
   return `
     <div class="shelf-block" data-category="${esc(categoryId)}">
       <div class="shelf-header">
-        <div class="shelf-title-wrap">
-          <h2 class="section-title">
-            ${esc(title)}
-          </h2>
-          <span class="shelf-count-badge">
-            ${books.length}
-          </span>
-        </div>
+        <h2 class="section-title">
+          ${esc(title)}
+        </h2>
 
         ${
-          hasExtra
+          canCollapse
             ? `
           <button
             type="button"
@@ -531,7 +532,7 @@ function renderShelf(
         </div>
 
         ${
-          hasExtra
+          extraTiers.length
             ? `
           <div class="shelf-extra-tiers ${isExpanded ? 'expanded' : 'collapsed'}" id="shelf-extra-${esc(categoryId)}">
             ${extraTiers
