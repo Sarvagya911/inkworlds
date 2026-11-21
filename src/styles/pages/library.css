@@ -128,31 +128,156 @@
   margin: 0;
 }
 
+/* ---------- Shelf Plaque Toggle Button (Antiquarian Brass) ---------- */
+
 .shelf-expand-btn {
-  background: transparent;
-  border: 1px solid rgba(184, 147, 88, 0.35);
-  color: var(--brass);
-  font-family: var(--ui);
-  font-size: 0.82rem;
-  font-weight: 500;
-  padding: 0.32rem 0.85rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.3, 1);
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.34rem 0.82rem;
+  font-family: var(--display), 'IM Fell English', Georgia, serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  letter-spacing: 0.035em;
+  color: var(--brass);
+  background: linear-gradient(
+    180deg,
+    rgba(38, 28, 20, 0.82) 0%,
+    rgba(22, 16, 12, 0.94) 100%
+  );
+  border: 1px solid rgba(201, 162, 88, 0.45);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 88, 0.18),
+    inset 0 1px 0 rgba(255, 235, 180, 0.22),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.3, 1),
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    color 0.22s ease;
 }
 
+/* Light theme support */
+:root:not([data-theme='dark']) .shelf-expand-btn {
+  background: linear-gradient(
+    180deg,
+    rgba(249, 244, 234, 0.95) 0%,
+    rgba(235, 226, 208, 0.95) 100%
+  );
+  color: #7a5518;
+  border-color: rgba(138, 101, 38, 0.45);
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 101, 38, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme='dark'] .shelf-expand-btn {
+  background: linear-gradient(
+    180deg,
+    rgba(38, 28, 20, 0.82) 0%,
+    rgba(22, 16, 12, 0.94) 100%
+  );
+  color: var(--brass);
+  border-color: rgba(201, 162, 88, 0.45);
+}
+
+/* Tiny brass screw / rivet dots on either side */
+.shelf-btn-rivet {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffeaab, var(--brass) 65%, #422d14 100%);
+  box-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+:root:not([data-theme='dark']) .shelf-btn-rivet {
+  background: radial-gradient(circle at 35% 35%, #fae4a8, #9a732a 70%, #5a4014 100%);
+}
+
+/* Book Folio Icon */
+.shelf-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.9;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.shelf-btn-label {
+  display: inline-block;
+  line-height: 1.1;
+  padding: 0 0.1rem;
+}
+
+/* Chevron */
+.shelf-btn-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.shelf-expand-btn[aria-expanded='true'] .shelf-btn-chevron {
+  transform: rotate(180deg);
+}
+
+/* Hover state: polished brass glow */
 .shelf-expand-btn:hover {
-  background: rgba(184, 147, 88, 0.12);
-  border-color: var(--brass);
-  transform: translateY(-1px);
+  color: #fae4a8;
+  border-color: rgba(230, 190, 115, 0.75);
+  transform: translateY(-1.5px);
+  box-shadow:
+    inset 0 0 0 1px rgba(230, 190, 115, 0.35),
+    inset 0 1px 0 rgba(255, 245, 205, 0.4),
+    0 0 14px rgba(201, 162, 88, 0.28),
+    0 4px 10px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 10px rgba(250, 228, 168, 0.5);
 }
 
+:root:not([data-theme='dark']) .shelf-expand-btn:hover {
+  color: #5f410c;
+  border-color: rgba(138, 101, 38, 0.75);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 250, 242, 0.98) 0%,
+    rgba(240, 230, 212, 0.98) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 101, 38, 0.25),
+    inset 0 1px 0 #fff,
+    0 0 12px rgba(184, 147, 88, 0.22),
+    0 3px 8px rgba(0, 0, 0, 0.15);
+  text-shadow: none;
+}
+
+.shelf-expand-btn:hover .shelf-btn-icon {
+  transform: scale(1.08);
+}
+
+/* Active / pressed state */
 .shelf-expand-btn:active {
   transform: translateY(0);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 88, 0.25),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .shelf {

@@ -518,8 +518,22 @@ function renderShelf(
             class="shelf-expand-btn"
             data-shelf-toggle="${esc(categoryId)}"
             aria-expanded="${isExpanded ? 'true' : 'false'}"
+            title="${isExpanded ? 'Collapse shelf' : `Show all ${books.length} books`}"
           >
-            <span>${isExpanded ? 'Collapse shelf ▴' : `Show all ${books.length} books ▾`}</span>
+            <span class="shelf-btn-rivet" aria-hidden="true"></span>
+            <span class="shelf-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 13.5V3.5C2.5 2.4 3.4 1.5 4.5 1.5H13.5V11.5H4.5C3.4 11.5 2.5 12.4 2.5 13.5Z" />
+                <path d="M2.5 13.5C2.5 12.4 3.4 11.5 4.5 11.5H13.5" />
+              </svg>
+            </span>
+            <span class="shelf-btn-label">${isExpanded ? 'Collapse shelf' : `Show all ${books.length} books`}</span>
+            <span class="shelf-btn-chevron" aria-hidden="true">
+              <svg viewBox="0 0 12 12" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 4.5L6 8L9.5 4.5" />
+              </svg>
+            </span>
+            <span class="shelf-btn-rivet" aria-hidden="true"></span>
           </button>
         `
             : ''
