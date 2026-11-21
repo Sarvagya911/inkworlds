@@ -1439,13 +1439,30 @@ export async function extractPdf(
       }
     );
 
+  let outline = null;
+  try {
+    const rawOutline = await pdf.getOutline();
+    if (rawOutline && rawOutline.length) {
+      const flat = [];
+      const walk = items => {
+        for (const item of items || []) {
+          if (item?.title) flat.push(item.title);
+          if (item?.items?.length) walk(item.items);
+        }
+      };
+      walk(rawOutline);
+      outline = flat;
+    }
+  } catch (_) {}
+
   return {
     pages,
     title:
       info.Title,
     author:
       info.Author,
-    cover
+    cover,
+    outline
   };
 }
 

@@ -35,25 +35,47 @@ export function docHeading(s) {
   return upperRatio(s) > 0.6 || starts || possessive ? type : null;
 }
 
-export function chaptersFromParas(paras) {
-  const chs = [];
+export function splitTitleAndSub(fullTitle) {
+  const t = String(fullTitle || '').trim();
+  if (!t) return { title: '', sub: '' };
+  const m = t.match(/^((?:Chapter|Book|Part|Section|Volume|Act|Scene|Prologue|Epilogue)\s*[\w\dIVXLC]+)\s*[:—–-]\s*(.+)$/i);
+  if (m) {
+    return { title: m[1].trim(), sub: m[2].trim() };
+  }
+  return { title: t, sub: '' };
+}
+
+export function chaptersFromParas(paras, outline = []) {
+  let chs = [];
   let cur = { title: 'Opening', sub: '', paras: [] };
+  const outlineTitles = new Set(
+    (outline || [])
+      .map(o => (typeof o === 'string' ? o : o?.title)?.trim().toLowerCase())
+      .filter(Boolean)
+  );
+
   const isTitle = p => {
     const t = p.text;
     if (t.length > 70) return false;
+    if (outlineTitles.has(t.toLowerCase())) return true;
     if (/^(chapter|book|part|prologue|epilogue|interlude)\b/i.test(t)) return true;
     if (/^([IVXLC]{1,7}|\d{1,3})\.?$/.test(t)) return true;
     return p.big && t.length >= 3 && /[a-z]/i.test(t) && !docHeading(t);
   };
+
   for (const p of paras) {
     const t = p.text.trim();
     if (!t) continue;
     if (isTitle(p)) {
+      const { title: newTitle, sub: newSub } = splitTitleAndSub(t);
       if (cur.paras.length) {
         chs.push(cur);
-        cur = { title: t, sub: '', paras: [] };
-      } else if (cur.title !== 'Opening' && !cur.sub) cur.sub = t;
-      else cur = { title: t, sub: '', paras: [] };
+        cur = { title: newTitle, sub: newSub, paras: [] };
+      } else if (cur.title !== 'Opening' && !cur.sub) {
+        cur.sub = t;
+      } else {
+        cur = { title: newTitle, sub: newSub, paras: [] };
+      }
       continue;
     }
     if (
@@ -61,7 +83,8 @@ export function chaptersFromParas(paras) {
       cur.title !== 'Opening' &&
       !cur.sub &&
       t.length < 70 &&
-      upperRatio(t) > 0.6 &&
+      !/[.!?]$/.test(t) &&
+      (upperRatio(t) > 0.6 || words(t) <= 8) &&
       !docHeading(t)
     ) {
       cur.sub = t;
@@ -70,7 +93,19 @@ export function chaptersFromParas(paras) {
     cur.paras.push(t);
   }
   if (cur.paras.length) chs.push(cur);
-  if (chs.length > 1 && chs[0].title === 'Opening' && words(chs[0].paras.join(' ')) < 40) chs.shift();
+
+  // Shift out opening front-matter if it's very short or pure publication metadata (ISBN, copyright, etc.)
+  if (chs.length > 1 && chs[0].title === 'Opening') {
+    const w = words(chs[0].paras.join(' '));
+    const text = chs[0].paras.join(' ');
+    if (w < 60 || (w < 160 && /copyright|\ball rights reserved\b|isbn\b|published by\b/i.test(text))) {
+      chs.shift();
+    }
+  }
+
+  // Filter out standalone printed Table of Contents pages
+  chs = chs.filter(c => !/^(contents|table of contents|toc)$/i.test(c.title));
+
   if (chs.length < 2) {
     const all = chs.flatMap(c => c.paras),
       total = words(all.join(' '));

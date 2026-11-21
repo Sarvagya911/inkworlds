@@ -802,6 +802,7 @@ export async function addFile(file, options = {}) {
      *
      * Existing text extraction pipeline remains unchanged.
      */
+    let r = null;
     if (isPdf) {
       try {
         await loadPdfJs();
@@ -810,10 +811,6 @@ export async function addFile(file, options = {}) {
           "The PDF reader couldn't load. Check your internet connection and try again."
         );
       }
-
-
-      let r;
-
 
       try {
         r =
@@ -927,7 +924,8 @@ export async function addFile(file, options = {}) {
 
     chapters =
       chaptersFromParas(
-        paras
+        paras,
+        r?.outline || []
       );
 
 
