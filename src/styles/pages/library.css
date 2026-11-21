@@ -128,51 +128,50 @@
   margin: 0;
 }
 
-/* ---------- Minimalist Literary Shelf Toggle Action ---------- */
+/* ---------- Vellum / Archive Tag (Bookish & Antiquarian) ---------- */
 
 .shelf-expand-btn {
-  background: transparent;
-  border: none;
-  padding: 0.25rem 0.4rem;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.28rem 0.68rem;
   margin: 0;
   color: var(--brass);
   font-family: var(--display), 'IM Fell English', Georgia, serif;
-  font-size: 0.95rem;
-  font-style: italic;
-  letter-spacing: 0.02em;
+  font-size: 0.86rem;
+  letter-spacing: 0.035em;
+  background: rgba(235, 222, 195, 0.05);
+  border: 1px solid rgba(201, 162, 88, 0.32);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 88, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
   white-space: nowrap;
-  opacity: 0.82;
-  transition:
-    opacity 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
+}
+
+/* Light theme vellum paper */
+:root:not([data-theme='dark']) .shelf-expand-btn {
+  background: rgba(244, 237, 220, 0.78);
+  color: #7b581c;
+  border-color: rgba(138, 101, 38, 0.32);
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 101, 38, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .shelf-btn-label {
-  position: relative;
-  line-height: 1.2;
-}
-
-/* Subtle elegant hairline on hover */
-.shelf-btn-label::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 1px;
-  background: currentColor;
-  opacity: 0;
-  transform: scaleX(0.8);
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  display: inline-block;
+  line-height: 1.15;
 }
 
 .shelf-btn-chevron {
@@ -180,27 +179,33 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   color: currentColor;
+  opacity: 0.85;
 }
 
 .shelf-expand-btn[aria-expanded='true'] .shelf-btn-chevron {
   transform: rotate(180deg);
 }
 
+/* Hover: subtle vellum glow and fine gilded lift */
 .shelf-expand-btn:hover {
-  opacity: 1;
-  color: #e5b869;
+  color: #fae4a8;
+  background: rgba(235, 222, 195, 0.1);
+  border-color: rgba(201, 162, 88, 0.58);
   transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 162, 88, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 :root:not([data-theme='dark']) .shelf-expand-btn:hover {
-  color: #6a4a15;
-}
-
-.shelf-expand-btn:hover .shelf-btn-label::after {
-  opacity: 0.55;
-  transform: scaleX(1);
+  color: #5c3f0e;
+  background: rgba(248, 242, 228, 0.95);
+  border-color: rgba(138, 101, 38, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(138, 101, 38, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
 .shelf-expand-btn:active {
@@ -209,8 +214,7 @@
 
 .shelf-expand-btn:focus-visible {
   outline: 2px solid var(--focus, var(--brass));
-  outline-offset: 3px;
-  border-radius: 2px;
+  outline-offset: 2px;
 }
 
 .shelf {
