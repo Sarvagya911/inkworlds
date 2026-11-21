@@ -591,15 +591,9 @@
 }
 
 /* =========================================================
-   APP DOWNLOAD — touch phones and tablets only
+   APP DOWNLOAD — Android browser only
    ========================================================= */
 
 .actions .download-app {
-  display: none;
-}
-
-@media (max-width: 1024px) and (pointer: coarse) {
-  .actions .download-app {
-    display: inline-flex;
-  }
+  display: inline-flex;
 }

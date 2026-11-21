@@ -1,4 +1,5 @@
 // Home page.
+import { Capacitor } from '@capacitor/core';
 import { sampleMeta } from '../app/books.js';
 import { app, enc, signedIn } from '../app/helpers.js';
 import { progOf } from '../app/sync.js';
@@ -42,6 +43,9 @@ export async function viewHome() {
       lp = p;
     }
   }
+  const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform?.();
+  const showDownloadApp = !isNative && /android/i.test(navigator.userAgent || '');
+
   app.innerHTML = `<section class="view">
     <div class="hero">
       <div>
@@ -50,7 +54,7 @@ export async function viewHome() {
         <div class="actions">
           ${signedIn() ? `<a class="btn" href="#/library">Open your library</a>` : `<a class="btn" href="#/signup">Create a free account</a>`}
           <a class="btn ghost" href="#/read/sample-vellmoor">Read a sample story</a>
-          <a class="btn ghost download-app" href="/downloads/inkworlds.apk" download="inkworlds.apk" aria-label="Download the InkWorlds Android app">Download App</a>
+          ${showDownloadApp ? `<a class="btn ghost download-app" href="/downloads/inkworlds.apk" download="inkworlds.apk" aria-label="Download the InkWorlds Android app">Download App</a>` : ''}
           <a class="btn ghost" href="#/discover">Discover shared books</a>
         </div>
       </div>
