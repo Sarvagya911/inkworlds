@@ -25,6 +25,7 @@ import enchantedForest from './worlds/enchanted-forest.js';
 import medievalKingdom from './worlds/medieval-kingdom.js';
 import * as lunareth from './worlds/lunareth.js';
 import ashenRealms from './worlds/ashen-realms.js';
+import roseGarden from './worlds/rose-garden.js';
 
 // Every world's animated background, keyed by theme name.
 export const SCENES = {
@@ -44,4 +45,5 @@ export const SCENES = {
   medievalKingdom,
   lunareth,
   ashenRealms,
+  roseGarden,
 };

@@ -105,8 +105,10 @@ export const KEYS = {
     'rabbit curious queen cat garden hatter mouse dream wonderland nonsense giggle tea absurd mushroom playing cards',
 
   neon:
-    'cyberpunk cyber hacker hacking neon megacity metropolis android implant hologram drone cyberspace corporation corporate nightclub nightclub rain skyscraper skyline streetlight terminal network data code digital synthetic augmented chrome circuit electric'
+    'cyberpunk cyber hacker hacking neon megacity metropolis android implant hologram drone cyberspace corporation corporate nightclub nightclub rain skyscraper skyline streetlight terminal network data code digital synthetic augmented chrome circuit electric',
 
+  roseGarden:
+    'romance romantic love lover lovers passion kiss kisses bride groom darling beloved courtship wedding desire embrace ballroom duke duchess earl lord lady ballroom gown corset waltz sweetheart affection tender yearning marry married flirt beau suitor passion'
 };
 
 

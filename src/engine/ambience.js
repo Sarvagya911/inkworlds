@@ -133,6 +133,29 @@ export const Ambience = {
       }, 650)
     );
   },
+  romanceChimes() {
+    // Warm romantic conservatory celeste/harp tones
+    const notes = [440.0, 554.37, 659.25, 830.61, 987.77, 1318.51];
+    this.timers.push(
+      setInterval(() => {
+        if (!this.ctx || Math.random() > 0.45) return;
+        const c = this.ctx,
+          o = c.createOscillator(),
+          g = c.createGain(),
+          now = c.currentTime;
+        o.type = 'sine';
+        o.frequency.value = notes[Math.floor(Math.random() * notes.length)];
+        const v = 0.04 * (1 - this.mood.dark * 0.5);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(v, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.00008, now + 2.2);
+        o.connect(g);
+        g.connect(this.master);
+        o.start(now);
+        o.stop(now + 2.3);
+      }, 1400)
+    );
+  },
   build(world) {
     this.clear();
     this.world = world;
@@ -185,6 +208,12 @@ export const Ambience = {
       );
       // Distant volcanic atmosphere
       L.rain.base = 0.025;
+    }
+    if (world === 'roseGarden') {
+      // Warm conservatory evening: soft filtered breeze, subtle candle warmth, and romantic chimes
+      L.wind.base = 0.06;
+      L.fire = this.layer(this.crackle, 'highpass', 1500, 0.4, 0.08);
+      this.romanceChimes();
     }
     this.L = L;
     this.applyMood(this.mood, true);

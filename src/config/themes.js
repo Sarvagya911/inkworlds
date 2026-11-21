@@ -558,8 +558,29 @@ export const THEMES = {
     }
   },
 
-
-  
+  roseGarden: {
+    name: 'Rose Glasshouse',
+    best: 'Romance novels, enemies-to-lovers, courtship, and romantic fantasy.',
+    title: 'Playfair Display',
+    body: 'Spectral',
+    hand: 'Pinyon Script',
+    hs: 1.25,
+    panel: 'rgba(28, 16, 26, 0.72)',
+    text: '#fdf4f4',
+    accent: '#e07a8b',
+    bar: 'rgba(22, 12, 20, 0.88)',
+    edge: 'rgba(224, 122, 139, 0.3)',
+    hl: 'rgba(224, 122, 139, 0.42)',
+    paper: '#fcf3ee',
+    ink: '#2b121c',
+    rule: 'rgba(120, 60, 80, 0.22)',
+    orn: '❦',
+    spine: ['#7c2d46', '#3b1220', '#f4b8c6'],
+    rain: '220,180,200',
+    base: {
+      warm: 0.2
+    }
+  }
 };
 
 /* ============================== Fonts ============================== */
