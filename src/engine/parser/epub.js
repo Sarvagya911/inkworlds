@@ -412,60 +412,89 @@ export async function extractEpub(file, onProgress = () => {}) {
 
     // Case 1: Multiple TOC entries point to this file (subsections / chapters split by anchors)
     if (fileEntries.length > 1) {
-      const anchorPoints = fileEntries.map(entry => ({
-        entry,
-        el: findAnchorElement(doc, entry.anchor)
-      }));
+      const allLeafNodes = getLeafBlockNodes(body);
 
-      const validAnchors = anchorPoints.filter(ap => ap.el !== null);
+      // Map each TOC entry to its starting index in allLeafNodes
+      const anchorPoints = fileEntries.map(entry => {
+        const rawEl = findAnchorElement(doc, entry.anchor);
+        let blockIdx = -1;
+        if (rawEl) {
+          const block = rawEl.closest('p, h1, h2, h3, h4, h5, h6, li, pre, blockquote, dt, dd, div') || rawEl;
+          blockIdx = allLeafNodes.indexOf(block);
+          if (blockIdx < 0) {
+            blockIdx = allLeafNodes.findIndex(n =>
+              n === rawEl || (rawEl.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+            );
+          }
+        }
+        return { entry, el: rawEl, idx: blockIdx };
+      }).filter(ap => ap.idx >= 0);
 
-      if (validAnchors.length > 1) {
-        // Collect all leaf block nodes
-        const allLeafNodes = getLeafBlockNodes(body);
+      if (anchorPoints.length > 1) {
+        // Sort by document position (idx)
+        anchorPoints.sort((a, b) => a.idx - b.idx);
 
-        for (let aIdx = 0; aIdx < validAnchors.length; aIdx++) {
-          const currentAnchor = validAnchors[aIdx];
-          const nextAnchor = validAnchors[aIdx + 1];
-
-          const chapterNodes = allLeafNodes.filter(node => {
-            // Must not be before current anchor
-            if (node === currentAnchor.el) return true;
-            const posToCurrent = currentAnchor.el.compareDocumentPosition(node);
-            const isAfterCurrent = (posToCurrent & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 || currentAnchor.el.contains(node);
-            if (!isAfterCurrent) return false;
-
-            // Must be before next anchor if there is one
-            if (nextAnchor) {
-              if (node === nextAnchor.el) return false;
-              const posToNext = nextAnchor.el.compareDocumentPosition(node);
-              const isBeforeNext = (posToNext & Node.DOCUMENT_POSITION_PRECEDING) !== 0;
-              return isBeforeNext;
+        // Check for meaningful front-matter before the first anchor (e.g., Dedication, Acknowledgments)
+        if (anchorPoints[0].idx > 0) {
+          const frontNodes = allLeafNodes.slice(0, anchorPoints[0].idx);
+          let currentFront = null;
+          for (const node of frontNodes) {
+            const text = extractElementText(node);
+            if (!text) continue;
+            if (/^(dedication|acknowledgments|preface|foreword|note)\b/i.test(text) && text.length < 50) {
+              if (currentFront && currentFront.paras.length) chapters.push(currentFront);
+              currentFront = { title: text, sub: '', paras: [] };
+            } else if (currentFront) {
+              currentFront.paras.push(text);
             }
+          }
+          if (currentFront && currentFront.paras.length) chapters.push(currentFront);
+        }
 
-            return true;
-          });
+        for (let aIdx = 0; aIdx < anchorPoints.length; aIdx++) {
+          const cur = anchorPoints[aIdx];
+          const next = anchorPoints[aIdx + 1];
+          const start = cur.idx;
+          const end = next ? next.idx : allLeafNodes.length;
 
-          // Check if the first node is a heading identical to title
-          const { title: chTitle, sub: chSub } = splitTitleAndSub(currentAnchor.entry.title);
+          const chapterNodes = allLeafNodes.slice(start, end);
+          if (!chapterNodes.length) continue;
+
+          const { title: chTitle, sub: chSub } = splitTitleAndSub(cur.entry.title);
+          let finalTitle = chTitle || `Chapter ${chapters.length + 1}`;
+          let finalSub = chSub || '';
+
           const paras = [];
           for (let nIdx = 0; nIdx < chapterNodes.length; nIdx++) {
             const node = chapterNodes[nIdx];
             const text = extractElementText(node);
             if (!text) continue;
 
-            // Avoid repeating the chapter title if the node is a heading or anchor element
-            if (nIdx === 0 && /^H[1-6]$/i.test(node.tagName)) {
-              if (text.toLowerCase() === chTitle.toLowerCase() || text.toLowerCase() === currentAnchor.entry.title.toLowerCase()) {
+            // Exclude chapter title heading from paras so it does not print twice
+            if (nIdx === 0) {
+              const lower = text.toLowerCase();
+              if (
+                lower === finalTitle.toLowerCase() ||
+                lower === cur.entry.title.toLowerCase() ||
+                /^(chapter|prologue|epilogue|part|book)\b/i.test(lower)
+              ) {
                 continue;
               }
             }
+
+            // Check if second node is chapter viewpoint or subtitle (e.g. "Holden", "Miller", "Julie")
+            if (nIdx === 1 && !finalSub && text.length <= 40 && (text.match(/\S+/g) || []).length <= 4) {
+              finalSub = text;
+              continue;
+            }
+
             paras.push(text);
           }
 
           if (paras.length) {
             chapters.push({
-              title: chTitle || `Chapter ${chapters.length + 1}`,
-              sub: chSub || '',
+              title: finalTitle,
+              sub: finalSub,
               paras
             });
           }
@@ -480,24 +509,40 @@ export async function extractEpub(file, onProgress = () => {}) {
     if (fileEntries.length === 1) {
       const entry = fileEntries[0];
       const { title: chTitle, sub: chSub } = splitTitleAndSub(entry.title);
+      let finalTitle = chTitle || `Chapter ${chapters.length + 1}`;
+      let finalSub = chSub || '';
 
-      // Identify heading element to exclude from paras so it is not displayed twice
-      const heading = doc.querySelector('h1, h2, h3, .chapter-title, .title');
-      const excludeSet = new Set();
-      if (heading) {
-        const hText = cleanText(heading.textContent).toLowerCase();
-        if (hText === chTitle.toLowerCase() || hText === entry.title.toLowerCase() || /^(chapter|part|book)\b/i.test(hText)) {
-          excludeSet.add(heading);
+      const leafNodes = getLeafBlockNodes(body);
+      const paras = [];
+
+      for (let nIdx = 0; nIdx < leafNodes.length; nIdx++) {
+        const node = leafNodes[nIdx];
+        const text = extractElementText(node);
+        if (!text) continue;
+
+        if (nIdx === 0) {
+          const lower = text.toLowerCase();
+          if (
+            lower === finalTitle.toLowerCase() ||
+            lower === entry.title.toLowerCase() ||
+            /^(chapter|prologue|epilogue|part|book)\b/i.test(lower)
+          ) {
+            continue;
+          }
         }
-      }
 
-      const leafNodes = getLeafBlockNodes(body, excludeSet);
-      const paras = leafNodes.map(extractElementText).filter(Boolean);
+        if (nIdx === 1 && !finalSub && text.length <= 40 && (text.match(/\S+/g) || []).length <= 4 && /^H[1-6]$/i.test(node.tagName)) {
+          finalSub = text;
+          continue;
+        }
+
+        paras.push(text);
+      }
 
       if (paras.length) {
         chapters.push({
-          title: chTitle || `Chapter ${chapters.length + 1}`,
-          sub: chSub || '',
+          title: finalTitle,
+          sub: finalSub,
           paras
         });
       }
