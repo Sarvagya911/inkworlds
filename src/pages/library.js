@@ -411,7 +411,8 @@ function getSpineWidth(book) {
 
 function chunkBooksIntoShelves(books, containerWidth, reserveSpace = 0) {
   if (!books.length) return [];
-  const baseAvail = Math.max(320, (containerWidth || 960) - 48);
+  // Use actual container width minus shelf side padding (1rem left + 1rem right = 32px)
+  const baseAvail = Math.max(320, (containerWidth || 960) - 32);
   const gap = 6;
   const shelves = [];
   let currentShelf = [];
@@ -450,24 +451,67 @@ function secretTomeHTML(categoryId, isExpanded, extraBooksCount, totalBooks) {
         class="spine secret-tome-spine ${isExpanded ? 'is-expanded' : 'is-collapsed'}"
         data-shelf-toggle="${esc(categoryId)}"
         aria-expanded="${isExpanded ? 'true' : 'false'}"
-        aria-label="${isExpanded ? 'Fold lower shelves' : `Secret tome: reveal ${extraBooksCount} more books`}"
-        title="${isExpanded ? 'Fold lower shelves' : `Secret tome: pull to reveal ${extraBooksCount} more books`}"
+        aria-label="${isExpanded ? 'Fold lower shelves' : `Secret archive: pull book to reveal ${extraBooksCount} more tomes`}"
+        title="${isExpanded ? 'Secret archive: push book to fold shelves' : `Secret archive: pull book to reveal ${extraBooksCount} more tomes`}"
       >
-        <span class="secret-tome-top" aria-hidden="true">
-          <svg class="secret-key-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="8" cy="8" r="4"/>
-            <path d="M12 8h9M17 8v3M20 8v2"/>
-          </svg>
-        </span>
-        <span class="t secret-tome-title">
-          ${isExpanded ? 'Fold Archive ▴' : `+${extraBooksCount} Secret Tomes`}
-        </span>
-        <span class="secret-tome-bottom" aria-hidden="true">
-          <span class="secret-tome-gem">◆</span>
-        </span>
         <span class="secret-tome-ribbon" aria-hidden="true"></span>
+        <svg class="secret-spine-pattern" viewBox="0 0 34 180" width="30" height="170" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <!-- Top Tooling Band -->
+          <line x1="2" y1="6" x2="32" y2="6" stroke-width="1.3"/>
+          <line x1="4" y1="9" x2="30" y2="9" stroke-width="0.8" stroke-dasharray="1.5 1.5"/>
+
+          <!-- Compartment 1: Gilded Crown & Scrollwork -->
+          <path d="M17 14c-1.5 2.5-4 4-4 6.5 0 2 1.8 3.5 4 3.5s4-1.5 4-3.5c0-2.5-2.5-4-4-6.5z" stroke-width="1" fill="currentColor" fill-opacity="0.18"/>
+          <path d="M11 22c-2 2-3 4-1 5.5 2.5 1.5 5-1 7-3.5M23 22c2 2 3 4 1 5.5-2.5 1.5-5-1-7-3.5" stroke-width="0.9"/>
+          <circle cx="17" cy="20" r="1.5" fill="currentColor"/>
+
+          <!-- Rib 1 -->
+          <line x1="2" y1="36" x2="32" y2="36" stroke-width="1.4"/>
+          <line x1="2" y1="39" x2="32" y2="39" stroke-width="0.8"/>
+
+          <!-- Compartment 2: Upper Arabesque Foliage -->
+          <path d="M17 46c-4.5 2.5-8 7-8 11.5 0 4 3.5 7 8 9 4.5-2 8-5 8-9 0-4.5-3.5-9-8-11.5z" stroke-width="0.9" fill="currentColor" fill-opacity="0.08"/>
+          <circle cx="17" cy="57" r="2.8" stroke-width="0.9" fill="currentColor" fill-opacity="0.25"/>
+          <path d="M13 57h8M17 53v8" stroke-width="0.8"/>
+          <path d="M10 52c2-1 4-1 5 1M24 52c-2-1-4-1-5 1" stroke-width="0.8"/>
+
+          <!-- Rib 2 (Centerpiece Frame) -->
+          <line x1="2" y1="73" x2="32" y2="73" stroke-width="1.4"/>
+          <line x1="4" y1="76" x2="30" y2="76" stroke-width="0.8" stroke-dasharray="1.5 1.5"/>
+
+          <!-- Compartment 3 (Centerpiece): The Gilded Secret Keyhole Medallion -->
+          <circle cx="17" cy="92" r="10" stroke-width="1.2" fill="currentColor" fill-opacity="0.12"/>
+          <circle cx="17" cy="92" r="7.5" stroke-width="0.8" stroke-dasharray="1.5 1.5"/>
+          <!-- Keyhole in center -->
+          <circle cx="17" cy="90.5" r="2.2" fill="currentColor" stroke="none"/>
+          <path d="M15.8 91.5l-1 5h4.4l-1-5z" fill="currentColor" stroke="none"/>
+          <!-- Laurel leaves embracing the keyhole -->
+          <path d="M5 92c0-4.5 3.5-8 6-9M29 92c0-4.5-3.5-8-6-9M5 92c0 4.5 3.5 8 6 9M29 92c0 4.5-3.5 8-6 9" stroke-width="0.9"/>
+
+          <!-- Rib 3 -->
+          <line x1="4" y1="108" x2="30" y2="108" stroke-width="0.8" stroke-dasharray="1.5 1.5"/>
+          <line x1="2" y1="111" x2="32" y2="111" stroke-width="1.4"/>
+
+          <!-- Compartment 4: Lower Arabesque Foliage -->
+          <path d="M17 118c-4.5 2.5-8 7-8 11.5 0 4 3.5 7 8 9 4.5-2 8-5 8-9 0-4.5-3.5-9-8-11.5z" stroke-width="0.9" fill="currentColor" fill-opacity="0.08"/>
+          <circle cx="17" cy="129" r="2.8" stroke-width="0.9" fill="currentColor" fill-opacity="0.25"/>
+          <path d="M13 129h8M17 125v8" stroke-width="0.8"/>
+          <path d="M10 134c2 1 4 1 5-1M24 134c-2 1-4 1-5-1" stroke-width="0.8"/>
+
+          <!-- Rib 4 -->
+          <line x1="2" y1="145" x2="32" y2="145" stroke-width="0.8"/>
+          <line x1="2" y1="148" x2="32" y2="148" stroke-width="1.4"/>
+
+          <!-- Compartment 5: Base Tailpiece & Flourish -->
+          <path d="M17 155c-1.5-2.5-4-4-4-6.5 0-2 1.8-3.5 4-3.5s4 1.5 4 3.5c0 2.5-2.5 4-4 6.5z" stroke-width="1" fill="currentColor" fill-opacity="0.18"/>
+          <path d="M11 150c-2-2-3-4-1-5.5 2.5-1.5 5 1 7 3.5M23 150c2-2 3-4 1-5.5-2.5-1.5-5 1-7 3.5" stroke-width="0.9"/>
+          <circle cx="17" cy="152" r="1.5" fill="currentColor"/>
+
+          <!-- Bottom Tooling Band -->
+          <line x1="4" y1="168" x2="30" y2="168" stroke-width="0.8" stroke-dasharray="1.5 1.5"/>
+          <line x1="2" y1="171" x2="32" y2="171" stroke-width="1.3"/>
+        </svg>
       </button>
-      <span class="spine-category secret-tome-label">${isExpanded ? 'Archive' : 'Hidden'}</span>
     </div>
   `;
 }
@@ -529,8 +573,8 @@ function renderShelf(
   const previewOverflow = previewTiers.slice(1).reduce((sum, t) => sum + t.length, 0);
   const willOverflow = previewTiers.length > 2 || (previewTiers.length === 2 && previewOverflow > 4);
 
-  // If it will overflow, reserve 60px on tier 0 for the Secret Tome spine!
-  const tiers = willOverflow ? chunkBooksIntoShelves(books, containerWidth, 60) : previewTiers;
+  // If it will overflow, reserve exact width (54px) on tier 0 for the Secret Tome spine
+  const tiers = willOverflow ? chunkBooksIntoShelves(books, containerWidth, 54) : previewTiers;
   const extraBooksCount = tiers.slice(1).reduce((sum, t) => sum + t.length, 0);
   const canCollapse = willOverflow && extraBooksCount > 0;
 
