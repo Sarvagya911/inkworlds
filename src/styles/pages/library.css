@@ -128,162 +128,160 @@
   margin: 0;
 }
 
-/* ---------- Pure Bookmark Ribbon (Hanging from Wooden Shelf) ---------- */
+/* ---------- The "Secret Book" / Mystery Tome on the Shelf ---------- */
 
-.shelf-bookmark-ribbon {
-  position: absolute;
-  right: 2.2rem;
-  bottom: 0;
-  z-index: 6;
-  background: transparent;
-  border: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  user-select: none;
-  -webkit-user-select: none;
-  outline: none;
-  transform: translateY(100%);
-}
-
-/* Polished brass pin / tack holding the ribbon to the shelf rail */
-.ribbon-pin {
-  width: 14px;
-  height: 4px;
-  border-radius: 2px 2px 0 0;
-  background: linear-gradient(180deg, #fcebc7 0%, #c9a258 70%, #765620 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
-  z-index: 2;
-  flex-shrink: 0;
-}
-
-/* Silk woven bookmark ribbon */
-.ribbon-silk {
+.secret-tome-item {
   position: relative;
-  width: 28px;
-  height: 42px;
+  flex: 0 0 auto;
+}
+
+.secret-tome-spine {
+  position: relative;
+  width: 54px;
+  height: 218px;
+  margin-bottom: 18px;
   background: linear-gradient(
     90deg,
-    #6d111e 0%,
-    #981b2f 25%,
-    #b2263d 50%,
-    #981b2f 75%,
-    #6d111e 100%
+    #171224 0%,
+    #291f3e 18%,
+    #291f3e 78%,
+    #171224 100%
   );
+  color: #ffd269;
+  border: none;
+  border-left: 1px solid rgba(255, 210, 105, 0.28);
+  border-right: 1px solid rgba(255, 210, 105, 0.28);
   box-shadow:
-    inset 1px 0 0 rgba(235, 205, 130, 0.45),
-    inset -1px 0 0 rgba(235, 205, 130, 0.45),
-    0 4px 10px rgba(0, 0, 0, 0.45);
-  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% calc(100% - 9px), 0% 100%);
-  -webkit-clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% calc(100% - 9px), 0% 100%);
+    inset 0 9px 0 -6px #ffd269,
+    inset 0 -9px 0 -6px #ffd269,
+    2px 0 8px rgba(0, 0, 0, 0.45);
+  border-radius: 3px 3px 1px 1px;
+  cursor: pointer;
+  padding: 1.1rem 0.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.26s ease,
+    filter 0.2s ease;
+}
+
+/* Light theme antique burgundy leather */
+:root:not([data-theme='dark']) .secret-tome-spine {
+  background: linear-gradient(
+    90deg,
+    #42141c 0%,
+    #66202c 18%,
+    #66202c 78%,
+    #42141c 100%
+  );
+  color: #fae4a8;
+  border-left: 1px solid rgba(250, 228, 168, 0.35);
+  border-right: 1px solid rgba(250, 228, 168, 0.35);
+  box-shadow:
+    inset 0 9px 0 -6px #fae4a8,
+    inset 0 -9px 0 -6px #fae4a8,
+    2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Brass key icon at the top of the spine */
+.secret-tome-top {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-bottom: 9px;
-  color: #fae4a8;
+  color: inherit;
+  opacity: 0.95;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+  flex-shrink: 0;
+}
+
+/* Vertical title text running down the spine */
+.secret-tome-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
   font-family: var(--display), 'IM Fell English', Georgia, serif;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  transition:
-    height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
-    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 0.2s ease,
-    box-shadow 0.25s ease;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.9),
+    0 0 3px rgba(255, 210, 105, 0.4);
+  max-height: 140px;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
 }
 
-/* Light theme silk */
-:root:not([data-theme='dark']) .ribbon-silk {
-  background: linear-gradient(
-    90deg,
-    #7a1625 0%,
-    #a82036 25%,
-    #bf2a42 50%,
-    #a82036 75%,
-    #7a1625 100%
-  );
-  box-shadow:
-    inset 1px 0 0 rgba(255, 225, 140, 0.5),
-    inset -1px 0 0 rgba(255, 225, 140, 0.5),
-    0 3px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Ribbon marks & counts */
-.ribbon-tome-mark {
-  display: inline-flex;
+/* Bottom foil emblem */
+.secret-tome-bottom {
+  display: flex;
   align-items: center;
   justify-content: center;
+  color: inherit;
+  font-size: 0.65rem;
+  opacity: 0.85;
+  flex-shrink: 0;
 }
 
-.ribbon-count {
-  display: inline-block;
-  line-height: 1;
-}
-
-/* When expanded, the ribbon gracefully drops down lower to mark the open shelves! */
-.shelf-bookmark-ribbon.is-expanded .ribbon-silk {
-  height: 64px;
-  padding-bottom: 12px;
-}
-
-/* Tactile downward pull on hover */
-.shelf-bookmark-ribbon:hover .ribbon-silk {
-  transform: translateY(4px);
-  filter: brightness(1.15);
-  box-shadow:
-    inset 1px 0 0 rgba(255, 235, 160, 0.7),
-    inset -1px 0 0 rgba(255, 235, 160, 0.7),
-    0 6px 14px rgba(0, 0, 0, 0.55);
-}
-
-/* Active / pull feedback */
-.shelf-bookmark-ribbon:active .ribbon-silk {
-  transform: translateY(7px);
-}
-
-/* Delicate parchment/brass whispered tooltip */
-.ribbon-tooltip {
+/* Silk ribbon bookmark hanging out from the secret tome */
+.secret-tome-ribbon {
   position: absolute;
-  top: 50%;
-  right: calc(100% + 8px);
-  transform: translateY(-50%) translateX(4px);
-  background: rgba(20, 15, 12, 0.94);
-  color: var(--brass);
-  font-family: var(--display), 'IM Fell English', Georgia, serif;
-  font-size: 0.82rem;
-  font-style: italic;
-  letter-spacing: 0.03em;
-  padding: 0.2rem 0.55rem;
-  border-radius: 3px;
-  border: 1px solid rgba(201, 162, 88, 0.38);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
-  white-space: nowrap;
+  top: -6px;
+  right: 8px;
+  width: 8px;
+  height: 18px;
+  background: linear-gradient(180deg, #941e30 0%, #c43249 100%);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 75%, 0% 100%);
+  -webkit-clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 75%, 0% 100%);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
   pointer-events: none;
-  opacity: 0;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
 }
 
-:root:not([data-theme='dark']) .ribbon-tooltip {
-  background: rgba(252, 247, 238, 0.96);
-  color: #644412;
-  border-color: rgba(138, 101, 38, 0.4);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+/* Tactile secret pull hover: rises like pulling a secret book lever */
+.secret-tome-spine:hover,
+.secret-tome-spine:focus-visible {
+  transform: translateY(-16px);
+  box-shadow:
+    0 0 16px rgba(255, 210, 105, 0.45),
+    inset 0 9px 0 -6px #ffd269,
+    inset 0 -9px 0 -6px #ffd269,
+    4px 0 12px rgba(0, 0, 0, 0.5);
+  filter: brightness(1.1);
 }
 
-.shelf-bookmark-ribbon:hover .ribbon-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
+:root:not([data-theme='dark']) .secret-tome-spine:hover,
+:root:not([data-theme='dark']) .secret-tome-spine:focus-visible {
+  box-shadow:
+    0 0 14px rgba(250, 228, 168, 0.4),
+    inset 0 9px 0 -6px #fae4a8,
+    inset 0 -9px 0 -6px #fae4a8,
+    3px 0 10px rgba(0, 0, 0, 0.35);
 }
 
-.shelf-bookmark-ribbon:focus-visible .ribbon-silk {
-  outline: 2px solid var(--focus, var(--brass));
-  outline-offset: 3px;
+/* When expanded, the secret tome remains slightly stepped out/tilted as the open mechanism */
+.secret-tome-spine.is-expanded {
+  border-color: #ffd269;
+  box-shadow:
+    0 0 10px rgba(255, 210, 105, 0.35),
+    inset 0 9px 0 -6px #ffd269,
+    inset 0 -9px 0 -6px #ffd269,
+    2px 0 8px rgba(0, 0, 0, 0.45);
+}
+
+.secret-tome-label {
+  font-family: var(--display), Georgia, serif;
+  font-style: italic;
+  font-size: 0.72rem;
+  color: var(--brass);
+  opacity: 0.9;
+  letter-spacing: 0.04em;
 }
 
 .shelf {

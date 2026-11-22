@@ -409,9 +409,9 @@ function getSpineWidth(book) {
   return clamp(w, 48, 84);
 }
 
-function chunkBooksIntoShelves(books, containerWidth) {
+function chunkBooksIntoShelves(books, containerWidth, reserveSpace = 0) {
   if (!books.length) return [];
-  const avail = Math.max(320, (containerWidth || 960) - 48);
+  const baseAvail = Math.max(320, (containerWidth || 960) - 48);
   const gap = 6;
   const shelves = [];
   let currentShelf = [];
@@ -420,6 +420,10 @@ function chunkBooksIntoShelves(books, containerWidth) {
   for (const book of books) {
     const spineW = getSpineWidth(book);
     const needed = currentShelf.length === 0 ? spineW : spineW + gap;
+    const avail =
+      shelves.length === 0 && reserveSpace > 0
+        ? baseAvail - reserveSpace
+        : baseAvail;
 
     if (currentShelf.length > 0 && currentWidth + needed > avail) {
       shelves.push(currentShelf);
@@ -436,6 +440,36 @@ function chunkBooksIntoShelves(books, containerWidth) {
   }
 
   return shelves;
+}
+
+function secretTomeHTML(categoryId, isExpanded, extraBooksCount, totalBooks) {
+  return `
+    <div class="spine-item secret-tome-item">
+      <button
+        type="button"
+        class="spine secret-tome-spine ${isExpanded ? 'is-expanded' : 'is-collapsed'}"
+        data-shelf-toggle="${esc(categoryId)}"
+        aria-expanded="${isExpanded ? 'true' : 'false'}"
+        aria-label="${isExpanded ? 'Fold lower shelves' : `Secret tome: reveal ${extraBooksCount} more books`}"
+        title="${isExpanded ? 'Fold lower shelves' : `Secret tome: pull to reveal ${extraBooksCount} more books`}"
+      >
+        <span class="secret-tome-top" aria-hidden="true">
+          <svg class="secret-key-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="4"/>
+            <path d="M12 8h9M17 8v3M20 8v2"/>
+          </svg>
+        </span>
+        <span class="t secret-tome-title">
+          ${isExpanded ? 'Fold Archive ▴' : `+${extraBooksCount} Secret Tomes`}
+        </span>
+        <span class="secret-tome-bottom" aria-hidden="true">
+          <span class="secret-tome-gem">◆</span>
+        </span>
+        <span class="secret-tome-ribbon" aria-hidden="true"></span>
+      </button>
+      <span class="spine-category secret-tome-label">${isExpanded ? 'Archive' : 'Hidden'}</span>
+    </div>
+  `;
 }
 
 function renderShelf(
@@ -489,14 +523,16 @@ function renderShelf(
     (libraryShelvesEl && libraryShelvesEl.clientWidth) ||
     Math.min(window.innerWidth - 64, 1152) ||
     960;
-  const tiers = chunkBooksIntoShelves(books, containerWidth);
 
-  // Smart threshold:
-  // If there's only 1 shelf, or only 2 shelves with a small overflow (<= 4 books),
-  // show ALL shelves automatically with NO collapse button.
-  // Only offer collapse when there are 3+ shelves or a large overflow (> 4 books).
+  // First check if category overflows into multiple tiers
+  const previewTiers = chunkBooksIntoShelves(books, containerWidth, 0);
+  const previewOverflow = previewTiers.slice(1).reduce((sum, t) => sum + t.length, 0);
+  const willOverflow = previewTiers.length > 2 || (previewTiers.length === 2 && previewOverflow > 4);
+
+  // If it will overflow, reserve 60px on tier 0 for the Secret Tome spine!
+  const tiers = willOverflow ? chunkBooksIntoShelves(books, containerWidth, 60) : previewTiers;
   const extraBooksCount = tiers.slice(1).reduce((sum, t) => sum + t.length, 0);
-  const canCollapse = tiers.length > 2 || (tiers.length === 2 && extraBooksCount > 4);
+  const canCollapse = willOverflow && extraBooksCount > 0;
 
   const isExpanded = !canCollapse || expandedShelves.has(categoryId);
 
@@ -514,33 +550,7 @@ function renderShelf(
       <div class="shelf-tiers">
         <div class="shelf shelf-tier">
           ${firstTier.map(spineHTML).join('')}
-
-          ${
-            canCollapse
-              ? `
-            <button
-              type="button"
-              class="shelf-bookmark-ribbon ${isExpanded ? 'is-expanded' : 'is-collapsed'}"
-              data-shelf-toggle="${esc(categoryId)}"
-              aria-expanded="${isExpanded ? 'true' : 'false'}"
-              aria-label="${isExpanded ? 'Pull ribbon to fold to single shelf' : `Pull ribbon to reveal all ${books.length} tomes`}"
-              title="${isExpanded ? 'Pull ribbon to fold to top shelf' : `Pull ribbon to reveal all ${books.length} tomes`}"
-            >
-              <span class="ribbon-pin" aria-hidden="true"></span>
-              <span class="ribbon-silk" aria-hidden="true">
-                <span class="ribbon-tome-mark">
-                  ${
-                    isExpanded
-                      ? `<svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 10.5V3.5M3.5 7L7 3.5 10.5 7"/></svg>`
-                      : `<span class="ribbon-count">+${extraBooksCount}</span>`
-                  }
-                </span>
-              </span>
-              <span class="ribbon-tooltip" aria-hidden="true">${isExpanded ? 'Fold shelf' : `Reveal all ${books.length} tomes`}</span>
-            </button>
-          `
-              : ''
-          }
+          ${canCollapse ? secretTomeHTML(categoryId, isExpanded, extraBooksCount, books.length) : ''}
         </div>
 
         ${
