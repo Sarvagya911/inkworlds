@@ -509,43 +509,38 @@ function renderShelf(
         <h2 class="section-title">
           ${esc(title)}
         </h2>
-
-        ${
-          canCollapse
-            ? `
-          <button
-            type="button"
-            class="shelf-expand-btn shelf-spine-toggle"
-            data-shelf-toggle="${esc(categoryId)}"
-            aria-expanded="${isExpanded ? 'true' : 'false'}"
-            title="${isExpanded ? 'Fold to single shelf' : `Reveal all ${books.length} tomes`}"
-          >
-            <svg class="shelf-icon-stack" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M2.5 4h10.5c.6 0 1 .4 1 .9s-.4.9-1 .9H2.5" />
-              <path d="M2 7.5h11c.6 0 1 .4 1 .9s-.4.9-1 .9H2" />
-              <path d="M1.5 11h12c.6 0 1 .4 1 .9s-.4.9-1 .9H1.5" />
-              <path d="M2.5 4v1.8M2 7.5v1.8M1.5 11v1.8" />
-            </svg>
-
-            <svg class="shelf-icon-single" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3.5" y="2" width="9" height="12" rx="1.2" />
-              <line x1="3.5" y1="4.8" x2="12.5" y2="4.8" stroke-width="1" />
-              <line x1="3.5" y1="11.2" x2="12.5" y2="11.2" stroke-width="1" />
-              <path d="M8 2v4.5l1.3-.8 1.3.8V2" fill="currentColor" fill-opacity="0.35" stroke-width="0.9" />
-            </svg>
-
-            <span class="shelf-btn-label">${isExpanded ? 'Fold to single shelf' : `Reveal all ${books.length} tomes`}</span>
-
-            <span class="shelf-btn-ribbon" aria-hidden="true"></span>
-          </button>
-        `
-            : ''
-        }
       </div>
 
       <div class="shelf-tiers">
         <div class="shelf shelf-tier">
           ${firstTier.map(spineHTML).join('')}
+
+          ${
+            canCollapse
+              ? `
+            <button
+              type="button"
+              class="shelf-bookmark-ribbon ${isExpanded ? 'is-expanded' : 'is-collapsed'}"
+              data-shelf-toggle="${esc(categoryId)}"
+              aria-expanded="${isExpanded ? 'true' : 'false'}"
+              aria-label="${isExpanded ? 'Pull ribbon to fold to single shelf' : `Pull ribbon to reveal all ${books.length} tomes`}"
+              title="${isExpanded ? 'Pull ribbon to fold to top shelf' : `Pull ribbon to reveal all ${books.length} tomes`}"
+            >
+              <span class="ribbon-pin" aria-hidden="true"></span>
+              <span class="ribbon-silk" aria-hidden="true">
+                <span class="ribbon-tome-mark">
+                  ${
+                    isExpanded
+                      ? `<svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M7 10.5V3.5M3.5 7L7 3.5 10.5 7"/></svg>`
+                      : `<span class="ribbon-count">+${extraBooksCount}</span>`
+                  }
+                </span>
+              </span>
+              <span class="ribbon-tooltip" aria-hidden="true">${isExpanded ? 'Fold shelf' : `Reveal all ${books.length} tomes`}</span>
+            </button>
+          `
+              : ''
+          }
         </div>
 
         ${

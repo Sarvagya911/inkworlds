@@ -128,148 +128,160 @@
   margin: 0;
 }
 
-/* ---------- Leather Book Spine Toggle & Bookmark Ribbon ---------- */
+/* ---------- Pure Bookmark Ribbon (Hanging from Wooden Shelf) ---------- */
 
-.shelf-expand-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.36rem 0.95rem 0.36rem 0.75rem;
-  margin: 0;
-  color: #f3d692;
-  font-family: var(--display), 'IM Fell English', Georgia, serif;
-  font-size: 0.88rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  background: linear-gradient(
-    90deg,
-    #1b140f 0%,
-    #2e2118 18%,
-    #2e2118 78%,
-    #1b140f 100%
-  );
+.shelf-bookmark-ribbon {
+  position: absolute;
+  right: 2.2rem;
+  bottom: 0;
+  z-index: 6;
+  background: transparent;
   border: none;
-  border-radius: 3px 3px 2px 2px;
-  box-shadow:
-    inset 0 2px 0 0 #c9a258,
-    inset 0 -2px 0 0 #c9a258,
-    inset 0 0 0 1px rgba(201, 162, 88, 0.35),
-    0 2px 6px rgba(0, 0, 0, 0.35);
+  padding: 0;
+  margin: 0;
   cursor: pointer;
-  white-space: nowrap;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
   user-select: none;
   -webkit-user-select: none;
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.9),
-    0 0 3px rgba(243, 214, 146, 0.3);
-  transition:
-    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.22s ease,
-    color 0.22s ease;
+  outline: none;
+  transform: translateY(100%);
 }
 
-/* Light theme rich leather tone */
-:root:not([data-theme='dark']) .shelf-expand-btn {
+/* Polished brass pin / tack holding the ribbon to the shelf rail */
+.ribbon-pin {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #fcebc7 0%, #c9a258 70%, #765620 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+/* Silk woven bookmark ribbon */
+.ribbon-silk {
+  position: relative;
+  width: 28px;
+  height: 42px;
   background: linear-gradient(
     90deg,
-    #3f2a1b 0%,
-    #543926 18%,
-    #543926 78%,
-    #3f2a1b 100%
+    #6d111e 0%,
+    #981b2f 25%,
+    #b2263d 50%,
+    #981b2f 75%,
+    #6d111e 100%
   );
-  color: #fae4a8;
   box-shadow:
-    inset 0 2px 0 0 #dfb76c,
-    inset 0 -2px 0 0 #dfb76c,
-    inset 0 0 0 1px rgba(223, 183, 108, 0.35),
-    0 2px 5px rgba(0, 0, 0, 0.2);
+    inset 1px 0 0 rgba(235, 205, 130, 0.45),
+    inset -1px 0 0 rgba(235, 205, 130, 0.45),
+    0 4px 10px rgba(0, 0, 0, 0.45);
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% calc(100% - 9px), 0% 100%);
+  -webkit-clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% calc(100% - 9px), 0% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 9px;
+  color: #fae4a8;
+  font-family: var(--display), 'IM Fell English', Georgia, serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  transition:
+    height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.2s ease,
+    box-shadow 0.25s ease;
 }
 
-.shelf-btn-label {
-  display: inline-block;
-  line-height: 1.15;
+/* Light theme silk */
+:root:not([data-theme='dark']) .ribbon-silk {
+  background: linear-gradient(
+    90deg,
+    #7a1625 0%,
+    #a82036 25%,
+    #bf2a42 50%,
+    #a82036 75%,
+    #7a1625 100%
+  );
+  box-shadow:
+    inset 1px 0 0 rgba(255, 225, 140, 0.5),
+    inset -1px 0 0 rgba(255, 225, 140, 0.5),
+    0 3px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Icons: Stack of books (collapsed) vs Single book (expanded) */
-.shelf-icon-stack,
-.shelf-icon-single {
+/* Ribbon marks & counts */
+.ribbon-tome-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: inherit;
-  opacity: 0.95;
-  transition: transform 0.2s ease;
 }
 
-.shelf-expand-btn[aria-expanded='false'] .shelf-icon-single {
-  display: none;
-}
-.shelf-expand-btn[aria-expanded='false'] .shelf-icon-stack {
-  display: inline-flex;
+.ribbon-count {
+  display: inline-block;
+  line-height: 1;
 }
 
-.shelf-expand-btn[aria-expanded='true'] .shelf-icon-stack {
-  display: none;
-}
-.shelf-expand-btn[aria-expanded='true'] .shelf-icon-single {
-  display: inline-flex;
+/* When expanded, the ribbon gracefully drops down lower to mark the open shelves! */
+.shelf-bookmark-ribbon.is-expanded .ribbon-silk {
+  height: 64px;
+  padding-bottom: 12px;
 }
 
-/* Silk bookmark ribbon hanging below the leather shelf plate */
-.shelf-btn-ribbon {
+/* Tactile downward pull on hover */
+.shelf-bookmark-ribbon:hover .ribbon-silk {
+  transform: translateY(4px);
+  filter: brightness(1.15);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 235, 160, 0.7),
+    inset -1px 0 0 rgba(255, 235, 160, 0.7),
+    0 6px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* Active / pull feedback */
+.shelf-bookmark-ribbon:active .ribbon-silk {
+  transform: translateY(7px);
+}
+
+/* Delicate parchment/brass whispered tooltip */
+.ribbon-tooltip {
   position: absolute;
-  right: 14px;
-  bottom: -6px;
-  width: 9px;
-  height: 10px;
-  background: linear-gradient(180deg, #b82a3f 0%, #761222 100%);
-  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 72%, 0% 100%);
-  -webkit-clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 72%, 0% 100%);
-  filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, 0.45));
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%) translateX(4px);
+  background: rgba(20, 15, 12, 0.94);
+  color: var(--brass);
+  font-family: var(--display), 'IM Fell English', Georgia, serif;
+  font-size: 0.82rem;
+  font-style: italic;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  border: 1px solid rgba(201, 162, 88, 0.38);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
   pointer-events: none;
+  opacity: 0;
   transition:
-    height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
-    bottom 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
-/* Ribbon hangs lower when expanded! */
-.shelf-expand-btn[aria-expanded='true'] .shelf-btn-ribbon {
-  height: 16px;
-  bottom: -12px;
+:root:not([data-theme='dark']) .ribbon-tooltip {
+  background: rgba(252, 247, 238, 0.96);
+  color: #644412;
+  border-color: rgba(138, 101, 38, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-/* Hover: gold foil gleam & slight lift */
-.shelf-expand-btn:hover {
-  color: #ffeaab;
-  transform: translateY(-1.5px);
-  box-shadow:
-    inset 0 2px 0 0 #f0cb7e,
-    inset 0 -2px 0 0 #f0cb7e,
-    inset 0 0 0 1px rgba(240, 203, 126, 0.6),
-    0 4px 10px rgba(0, 0, 0, 0.4);
+.shelf-bookmark-ribbon:hover .ribbon-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
-:root:not([data-theme='dark']) .shelf-expand-btn:hover {
-  color: #fff2cc;
-  box-shadow:
-    inset 0 2px 0 0 #fad489,
-    inset 0 -2px 0 0 #fad489,
-    inset 0 0 0 1px rgba(250, 212, 137, 0.6),
-    0 3px 8px rgba(0, 0, 0, 0.25);
-}
-
-.shelf-expand-btn:hover .shelf-icon-stack,
-.shelf-expand-btn:hover .shelf-icon-single {
-  transform: scale(1.08);
-}
-
-.shelf-expand-btn:active {
-  transform: translateY(0);
-}
-
-.shelf-expand-btn:focus-visible {
+.shelf-bookmark-ribbon:focus-visible .ribbon-silk {
   outline: 2px solid var(--focus, var(--brass));
   outline-offset: 3px;
 }
@@ -684,6 +696,7 @@
     scrollbar-width: thin;
   }
 
+  .shelf-bookmark-ribbon,
   .shelf-expand-btn {
     display: none !important;
   }
