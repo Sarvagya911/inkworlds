@@ -151,33 +151,33 @@ export function getTitleTypography(title, spineW, spineH) {
   const words = clean.split(/\s+/);
   const longestWord = Math.max(...words.map(w => w.length), 0);
 
-  let fontSize = 1.02;
-  let lineHeight = 1.15;
+  let fontSize = 0.98;
+  let lineHeight = 1.14;
 
   if (len <= 14) {
-    fontSize = spineW >= 60 ? 1.04 : 0.96;
+    fontSize = spineW >= 56 ? 1.02 : 0.94;
     lineHeight = 1.15;
   } else if (len <= 24) {
-    fontSize = spineW >= 68 ? 0.98 : (spineW >= 54 ? 0.90 : 0.84);
+    fontSize = spineW >= 60 ? 0.94 : (spineW >= 52 ? 0.88 : 0.82);
     lineHeight = 1.12;
   } else if (len <= 34) {
-    if (spineW >= 74) fontSize = 0.92;
-    else if (spineW >= 58) fontSize = 0.84;
-    else if (spineW >= 48) fontSize = 0.76;
-    else fontSize = 0.70;
+    if (spineW >= 64) fontSize = 0.88;
+    else if (spineW >= 54) fontSize = 0.80;
+    else if (spineW >= 46) fontSize = 0.74;
+    else fontSize = 0.68;
     lineHeight = 1.10;
   } else {
     // 35+ characters (e.g. "Harry Potter and the Chamber of Secrets")
-    if (spineW >= 80) fontSize = 0.84;
-    else if (spineW >= 64) fontSize = 0.78;
-    else if (spineW >= 52) fontSize = 0.72;
-    else fontSize = 0.66;
+    if (spineW >= 64) fontSize = 0.82;
+    else if (spineW >= 54) fontSize = 0.74;
+    else if (spineW >= 46) fontSize = 0.68;
+    else fontSize = 0.64;
     lineHeight = 1.06;
   }
 
-  if (spineW < 48 && (len > 20 || longestWord > 8)) {
-    fontSize = Math.min(fontSize, 0.68);
-    lineHeight = 1.05;
+  if (spineW < 46 && (len > 20 || longestWord > 8)) {
+    fontSize = Math.min(fontSize, 0.65);
+    lineHeight = 1.04;
   }
 
   return {
@@ -198,7 +198,12 @@ export function spineHTML(book) {
     ((progOf(book.id) || {}).pct || 0) * 100
   );
 
-  const spineH = 196 + (hash % 6) * 11;
+  const pages =
+    book.pages ||
+    Math.max(70, Math.round((book.words || 3000) / 280));
+  // Proportional height: thicker volumes stand taller like hardcover omnibuses (212px - 246px)
+  const baseH = 212 + clamp(Math.round(pages * 0.036), 0, 30);
+  const spineH = clamp(baseH + ((hash % 5) - 2) * 3, 208, 246);
   const spineW = getSpineWidth(book);
   const typo = getTitleTypography(book.title, spineW, spineH);
 
@@ -452,13 +457,10 @@ export function getSpineWidth(book) {
   const pages =
     book.pages ||
     Math.max(70, Math.round((book.words || 3000) / 280));
-  // Rich, realistic spine thickness curve proportional to page count:
-  // Thin (~80 pages): ~40px
-  // Short/medium (~200-350 pages): ~48-58px
-  // Substantial (~450-600 pages): ~65-76px
-  // Massive tomes (~700-1000+ pages): ~83-92px
-  const w = 34 + pages * 0.07;
-  return clamp(Math.round(w), 40, 92);
+  // Elegant width curve: slender novellas 40-44px, medium 48-56px, substantial 58-64px, thickest tomes 66-68px
+  // Capped at 68px so thick volumes stay slender, stately, and never look stubby!
+  const baseW = 34 + Math.round(Math.sqrt(pages) * 1.15);
+  return clamp(baseW, 40, 68);
 }
 
 function chunkBooksIntoShelves(books, containerWidth, reserveSpace = 0) {
@@ -621,7 +623,7 @@ function renderShelf(
   // First check if category overflows into multiple tiers
   const previewTiers = chunkBooksIntoShelves(books, containerWidth, 0);
   const previewOverflow = previewTiers.slice(1).reduce((sum, t) => sum + t.length, 0);
-  const willOverflow = previewTiers.length > 2 || (previewTiers.length === 2 && previewOverflow > 4);
+  const willOverflow = previewTiers.length > 1 && previewOverflow > 1;
 
   // If it will overflow, reserve exact width (46px: 40px tome + 6px gap) on tier 0 for the Secret Tome spine
   const tiers = willOverflow ? chunkBooksIntoShelves(books, containerWidth, 46) : previewTiers;
