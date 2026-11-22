@@ -145,6 +145,47 @@ function typeOf(book) {
   );
 }
 
+export function getTitleTypography(title, spineW, spineH) {
+  const clean = (title || '').trim();
+  const len = clean.length;
+  const words = clean.split(/\s+/);
+  const longestWord = Math.max(...words.map(w => w.length), 0);
+
+  let fontSize = 1.02;
+  let lineHeight = 1.15;
+
+  if (len <= 14) {
+    fontSize = spineW >= 60 ? 1.04 : 0.96;
+    lineHeight = 1.15;
+  } else if (len <= 24) {
+    fontSize = spineW >= 68 ? 0.98 : (spineW >= 54 ? 0.90 : 0.84);
+    lineHeight = 1.12;
+  } else if (len <= 34) {
+    if (spineW >= 74) fontSize = 0.92;
+    else if (spineW >= 58) fontSize = 0.84;
+    else if (spineW >= 48) fontSize = 0.76;
+    else fontSize = 0.70;
+    lineHeight = 1.10;
+  } else {
+    // 35+ characters (e.g. "Harry Potter and the Chamber of Secrets")
+    if (spineW >= 80) fontSize = 0.84;
+    else if (spineW >= 64) fontSize = 0.78;
+    else if (spineW >= 52) fontSize = 0.72;
+    else fontSize = 0.66;
+    lineHeight = 1.06;
+  }
+
+  if (spineW < 48 && (len > 20 || longestWord > 8)) {
+    fontSize = Math.min(fontSize, 0.68);
+    lineHeight = 1.05;
+  }
+
+  return {
+    fontSize: `${fontSize}rem`,
+    lineHeight: `${lineHeight}`,
+  };
+}
+
 export function spineHTML(book) {
   const th = THEMES[themeOf(book)];
 
@@ -157,17 +198,19 @@ export function spineHTML(book) {
     ((progOf(book.id) || {}).pct || 0) * 100
   );
 
+  const spineH = 196 + (hash % 6) * 11;
+  const spineW = getSpineWidth(book);
+  const typo = getTitleTypography(book.title, spineW, spineH);
+
   const style = `
-    height:${196 + (hash % 6) * 11}px;
-    width:${clamp(
-      44 + (book.words || 3000) / 6000,
-      44,
-      72
-    )}px;
+    height:${spineH}px;
+    width:${spineW}px;
     --s1:${th.spine[0]};
     --s2:${th.spine[1]};
     --s3:${th.spine[2]};
     --sf:${esc(fontStack(th.title, 'title'))};
+    --tf:${typo.fontSize};
+    --tlh:${typo.lineHeight};
   `;
 
   const pub =
@@ -404,9 +447,18 @@ function showUploadTypePicker() {
 
 const expandedShelves = new Set();
 
-function getSpineWidth(book) {
-  const w = 44 + (book.words || 3000) / 6000;
-  return clamp(w, 44, 72);
+export function getSpineWidth(book) {
+  // Estimated pages: ~280 words per page (or book.pages if present)
+  const pages =
+    book.pages ||
+    Math.max(70, Math.round((book.words || 3000) / 280));
+  // Rich, realistic spine thickness curve proportional to page count:
+  // Thin (~80 pages): ~40px
+  // Short/medium (~200-350 pages): ~48-58px
+  // Substantial (~450-600 pages): ~65-76px
+  // Massive tomes (~700-1000+ pages): ~83-92px
+  const w = 34 + pages * 0.07;
+  return clamp(Math.round(w), 40, 92);
 }
 
 function chunkBooksIntoShelves(books, containerWidth, reserveSpace = 0) {
