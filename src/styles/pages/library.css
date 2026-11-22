@@ -130,17 +130,12 @@
 
 /* ---------- The "Secret Book" / Mystery Tome on the Shelf ---------- */
 
-.secret-tome-item {
-  position: relative;
-  flex: 0 0 auto;
-  perspective: 900px;
-}
-
 .secret-tome-spine {
   position: relative;
-  width: 48px;
+  width: 40px;
   height: 216px;
-  margin-bottom: 18px;
+  margin-bottom: 18px !important;
+  box-sizing: border-box;
   background: linear-gradient(
     90deg,
     #1b1117 0%,
@@ -165,8 +160,11 @@
   outline: none;
   user-select: none;
   -webkit-user-select: none;
-  transform-origin: bottom center; /* Grounded on the wooden shelf rail! */
-  transform: perspective(900px) rotateX(0deg);
+  transform-origin: 50% 100% !important; /* Grounded flush on the wooden shelf rail */
+  perspective-origin: 50% 100%;
+  transform: perspective(600px) rotateX(0deg) !important;
+  will-change: transform;
+  backface-visibility: hidden;
   transition:
     transform 0.32s cubic-bezier(0.2, 0.8, 0.25, 1),
     box-shadow 0.32s ease,
@@ -191,21 +189,22 @@
     2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Pattern styling */
+/* Pattern styling - centered without horizontal drift */
 .secret-spine-pattern {
   display: block;
   flex-shrink: 0;
   color: inherit;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
   transition: filter 0.25s ease;
+  pointer-events: none;
 }
 
 /* Silk ribbon bookmark peeking from top */
 .secret-tome-ribbon {
   position: absolute;
   top: -7px;
-  right: 7px;
-  width: 8px;
+  right: 6px;
+  width: 7px;
   height: 18px;
   background: linear-gradient(180deg, #9a1e32 0%, #c8324a 100%);
   clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 75%, 0% 100%);
@@ -215,25 +214,26 @@
   transition: transform 0.3s ease;
 }
 
-/* Tactile 3D lever pull: tilts backward from the top into the shelf */
-.secret-tome-spine:hover,
-.secret-tome-spine:focus-visible {
-  transform: perspective(900px) rotateX(14deg);
+/* Grounded 3D lever tilt: tilts forward from top, base stays grounded on wood.
+   High specificity + !important prevents .spine:hover { transform: translateY(-14px) } from ever lifting it */
+.shelf .secret-tome-spine:hover,
+.shelf .secret-tome-spine:focus-visible {
+  transform: perspective(600px) rotateX(-8deg) !important;
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.6),
+    0 10px 20px rgba(0, 0, 0, 0.55),
     0 0 16px rgba(247, 213, 139, 0.35),
     inset 0 9px 0 -6px #f7d58b,
     inset 0 -9px 0 -6px #f7d58b;
   filter: brightness(1.12);
 }
 
-.secret-tome-spine:hover .secret-tome-ribbon {
-  transform: translateY(-2px);
+.shelf .secret-tome-spine:hover .secret-tome-ribbon {
+  transform: translateY(-1px);
 }
 
-/* When expanded, the secret tome remains pulled backward as the unlatched mechanism */
-.secret-tome-spine.is-expanded {
-  transform: perspective(900px) rotateX(18deg);
+/* When expanded, the secret tome remains unlatched in 3D lever position (-18deg), base grounded */
+.shelf .secret-tome-spine.is-expanded {
+  transform: perspective(600px) rotateX(-18deg) !important;
   box-shadow:
     0 14px 28px rgba(0, 0, 0, 0.65),
     0 0 20px rgba(247, 213, 139, 0.4),
@@ -242,12 +242,12 @@
   filter: brightness(1.15);
 }
 
-.secret-tome-spine.is-expanded:hover {
-  transform: perspective(900px) rotateX(6deg); /* pushes back upright to close */
+.shelf .secret-tome-spine.is-expanded:hover {
+  transform: perspective(600px) rotateX(-4deg) !important; /* Push back upright to close */
 }
 
 @media (max-width: 600px) {
-  .secret-tome-item {
+  .secret-tome-spine {
     display: none !important;
   }
 }
